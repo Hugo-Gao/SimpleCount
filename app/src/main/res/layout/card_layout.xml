@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                             xmlns:tools="http://schemas.android.com/tools"
+                                             android:layout_width="wrap_content"
+                                             android:layout_height="wrap_content"
+                                             xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <android.support.v7.widget.CardView
+        android:layout_width="450dp"
+        android:layout_height="270dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="5dp"
+        android:layout_gravity="center_horizontal"
+        app:cardElevation="10dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        app:cardPreventCornerOverlap="false"
+        android:clickable="false"
+        android:foreground="?attr/selectableItemBackground"
+        >
+
+
+        <TextView
+            android:text="时间"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-condensed"
+            android:layout_marginTop="160dp"
+            android:id="@+id/date_bill"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="190dp"
+            android:text="描述内容"
+            style="@style/MainContentStyle"
+            android:textSize="15sp"
+            android:id="@+id/des_bill"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="名字"
+            android:layout_marginTop="240dp"
+            android:layout_marginStart="15dp"
+            android:id="@+id/personame_each_bill"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="240dp"
+            android:layout_gravity="right"
+            android:layout_marginEnd="15dp"
+            android:id="@+id/money_each_bill"
+            android:text="XXX￥"/>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            app:srcCompat="@mipmap/ic_launcher"
+            android:id="@+id/pic_address"/>
+    </android.support.v7.widget.CardView>
+</RelativeLayout>

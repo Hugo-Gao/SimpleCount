@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/dialog_lauout"
+                xmlns:app="http://schemas.android.com/apk/res-auto">
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="以逗号分隔"
+        android:id="@+id/editText"
+        />
+
+    <android.support.design.widget.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/numofManButton"
+        android:src="@mipmap/ok"
+        app:backgroundTint="#ff87ffeb"
+        app:rippleColor="#33728dff"
+        android:elevation="10dp"
+        android:layout_below="@+id/editText"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="25dp"
+        android:onClick="confirm"/>
+
+</RelativeLayout>

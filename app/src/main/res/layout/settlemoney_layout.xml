@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+              xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#EEEEEE">
+
+    <android.support.design.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        >
+            <com.github.florent37.diagonallayout.DiagonalLayout
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                app:diagonal_angle="15"
+                app:diagonal_gravity="left"
+                android:elevation="10dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:id="@+id/diagonalLayout">
+
+
+
+
+                <com.flaviofaria.kenburnsview.KenBurnsView
+                     android:layout_width="match_parent"
+                     android:layout_height="match_parent"
+                     android:scaleType="fitStart"
+                     android:src="@mipmap/settlebackground"
+                     android:id="@+id/kenBurnsView"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Travle BigData"
+                    android:textColor="@android:color/white"
+                    android:layout_gravity="top|left"
+                    android:fontFamily="sans-serif-light"
+                    android:layout_marginLeft="30dp"
+                    android:layout_marginTop="70dp"
+                    android:textSize="25sp"
+                    />
+
+            </com.github.florent37.diagonallayout.DiagonalLayout>
+
+
+        <android.support.design.widget.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:backgroundTint="#757575"
+            android:id="@+id/floatingActionButton"
+            android:layout_marginLeft="50dp"
+            android:layout_marginTop="200dp"
+            android:src="@mipmap/back"
+            app:fab_size="normal"
+            app:elevation="15dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="40dp"/>
+
+    </android.support.design.widget.CoordinatorLayout>
+
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="4"
+            android:layout_marginTop="230dp">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                ></View>
+            <View
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                ></View>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="一共支出:"
+                    android:textSize="20sp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="5dp"
+                    android:id="@+id/bill_sum"
+                    android:text="￥500"/>
+            </LinearLayout>
+
+
+</LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:id="@+id/textAddWrapper"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="275dp"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp"
+        android:id="@+id/textbegin"
+        android:text="Test"/>
+
+
+
+
+    </LinearLayout>
+</RelativeLayout>
