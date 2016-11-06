@@ -27,7 +27,8 @@ public class DBOpenHelper extends SQLiteOpenHelper
                 "descripe text not null," +
                 "pic BLOB not null," +
                 "date text not null," +
-                "oldpic BLOB not null)");
+                "oldpic BLOB not null," +
+                "picadress text not null)");
 
     }
 

@@ -167,6 +167,8 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
                     {
                         Intent intent = new Intent(SettleMoneyActivity.this,AverageBillActivity.class);
                         startActivity(intent);
+                        SettleMoneyActivity.this.finish();
+
                     }
 
                     @Override
@@ -184,8 +186,50 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
                 animatorSet.playTogether(animator, animator1, animator2);
                 animator.setDuration(getResources().getInteger(android.R.integer.config_shortAnimTime));
                 animator.start();
+
                 break;
         }
+    }
+
+    @Override
+    public void onBackPressed()
+    {
+        ObjectAnimator animator = ObjectAnimator.ofFloat(FAB, "rotation", 0F,360F);
+        ObjectAnimator animator1 = ObjectAnimator.ofFloat(FAB, "scaleX", 1F,0.1F);
+        ObjectAnimator animator2 = ObjectAnimator.ofFloat(FAB, "scaleY", 1F,0.1F);
+        AnimatorSet animatorSet = new AnimatorSet();
+        animator.addListener(new Animator.AnimatorListener()
+        {
+            @Override
+            public void onAnimationStart(Animator animation)
+            {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation)
+            {
+                Intent intent = new Intent(SettleMoneyActivity.this,AverageBillActivity.class);
+                startActivity(intent);
+                SettleMoneyActivity.this.finish();
+
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation)
+            {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation)
+            {
+
+            }
+        });
+        animatorSet.playTogether(animator, animator1, animator2);
+        animator.setDuration(getResources().getInteger(android.R.integer.config_shortAnimTime));
+        animator.start();
     }
 }
 

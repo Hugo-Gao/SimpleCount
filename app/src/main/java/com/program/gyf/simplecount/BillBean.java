@@ -12,8 +12,17 @@ public class BillBean
     private String descripInfo;
     private byte[] picInfo;
     private byte[] oldpicInfo;
+    private String picadress;
 
+    public String getPicadress()
+    {
+        return picadress;
+    }
 
+    public void setPicadress(String picadress)
+    {
+        this.picadress = picadress;
+    }
 
     public BillBean(String dateInfo, byte[] picInfo, String descripInfo, String name, int money)
     {

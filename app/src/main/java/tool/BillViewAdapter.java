@@ -65,6 +65,7 @@ public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHold
         holder.nameInfo.setText(bean.getName());
         holder.moneyInfo.setText(bean.getMoneyString()+"￥");
         holder.itemView.setTag(bean);
+        holder.itemView.setTag(R.id.pic_address,holder.picInfo);
     }
 
     @Override
@@ -89,7 +90,7 @@ public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHold
     {
         if(mOnItemClickListen!=null)
         {
-            mOnItemClickListen.onItemClick(v,(BillBean) v.getTag());
+            mOnItemClickListen.onItemClick(v,(BillBean) v.getTag(), (ImageView) v.getTag(R.id.pic_address));
         }
     }
 
@@ -118,7 +119,7 @@ public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHold
 
     public static interface onRecyclerViewItemClickListen
     {
-        void onItemClick(View view, BillBean bean);
+        void onItemClick(View view, BillBean bean,ImageView imageView);
     }
     public void setOnItemClickListener(onRecyclerViewItemClickListen listener)
     {

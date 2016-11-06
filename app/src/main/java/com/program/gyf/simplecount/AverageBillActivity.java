@@ -112,19 +112,32 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             adapter.setOnItemClickListener(new BillViewAdapter.onRecyclerViewItemClickListen()
             {
                 @Override
-                public void onItemClick(View view, BillBean bean)
+                public void onItemClick(View view, BillBean bean,ImageView imageView)
                 {
-                    MaterialDialog materialCardDialog = new MaterialDialog(AverageBillActivity.this);
-                    materialCardDialog.setCanceledOnTouchOutside(true);
-                    LayoutInflater layoutInflater = LayoutInflater.from(AverageBillActivity.this);
-                    View cardView = layoutInflater.inflate(R.layout.card_dialog_layout, (ViewGroup) findViewById(R.id.card_dialogWrapper));
-                    ImageView oldPic = (ImageView) cardView.findViewById(R.id.old_pic);
-                    oldPic.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getOldpicInfo()));
-                    materialCardDialog.setContentView(cardView);
-                    materialCardDialog.show();
+                    Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
+                    i.putExtra("TheBeanInfo", bean.getDateInfo());
+                    String transitionName = "PicShare";
+                    ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
+                    startActivity(i, transitionActivityOptions.toBundle());
                 }
             });
             recyclerView.setAdapter(adapter);
+            recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
+            {
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy)
+                {
+                    super.onScrolled(recyclerView, dx, dy);
+                    if(dy>20)
+                    {
+                        ItemAnimition.translationToDisapper(addBillButton);
+                    }else if(dy<-10)
+                    {
+                        ItemAnimition.translationToAppear(addBillButton);
+
+                    }
+                }
+            });
 
         }
     }
@@ -183,9 +196,25 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                 {
                     startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this).toBundle());
+                    new Thread(new Runnable()//在后台线程中关闭此活动
+                    {
+                        @Override
+                        public void run()
+                        {
+                            try
+                            {
+                                Thread.sleep(1000);
+                                AverageBillActivity.this.finish();
+                            } catch (InterruptedException e)
+                            {
+                                e.printStackTrace();
+                            }
+                        }
+                    }).start();
                 }else
                 {
                     startActivity(intent);
+
                 }
 
         }
@@ -375,6 +404,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                         bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f,  816.0f);//保存原图
                         bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
+                        bean.setPicadress(imageUri.toString());
                         startActivityForResult(intent,CROP_PHOTO);
                     }
                 break;
@@ -396,6 +426,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 intent.setDataAndType(imgUri, "image/*");
                 bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f,  816.0f);//保存原图
                 bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
+                bean.setPicadress(imgUri.toString());
                 intent.putExtra("scale", true);
                 intent.putExtra("aspectX", 450);//裁切的宽比例
                 intent.putExtra("aspectY", 199);//裁切的高比例
@@ -436,9 +467,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("money",bean.getMoney());
         values.put("descripe",bean.getDescripInfo());
         values.put("pic", bean.getPicInfo());
-        values.put("oldpic", bean.getPicInfo());
+        values.put("oldpic", bean.getOldpicInfo());
         values.put("date",bean.getDateInfo());
-        Log.d("haha", "将原图存入数据库" + bean.getOldpicInfo());
+        values.put("picadress", bean.getPicadress());
         db.insert(TABLENAME, null, values);
         values.clear();
         db.close();
@@ -557,7 +588,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         List<BillBean> beanList = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.execSQL("CREATE TABLE IF NOT EXISTS BillDB(_id integer,name text,money integer,descripe text,pic BLOB,date text);");
         Cursor cursor = db.query(TABLENAME, null, null, null, null, null, null);
         if(cursor!=null)
         {
@@ -586,6 +616,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             break;
                         case "oldpic":
                             bean.setOldpicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
+                            break;
+                        case "picadress":
+                            bean.setPicadress(cursor.getString(cursor.getColumnIndex(name)));
                             break;
                     }
                 }

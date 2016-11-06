@@ -2,7 +2,6 @@ package tool;
 
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.content.Context;
 import android.view.View;
 
 /**
@@ -11,7 +10,6 @@ import android.view.View;
 
 public  class ItemAnimition
 {
-    private static Action action;
     public static void rotationAndGone(View view)
     {
         ObjectAnimator animator = ObjectAnimator.ofFloat(view, "rotation", 0F, 405F);
@@ -53,18 +51,17 @@ public  class ItemAnimition
         animator4.start();
 
     }
-    public static void confirmAndBigger(Context context, View view)
+    public static void translationToDisapper(View view)
     {
-        action.act();
+        float curY = view.getTranslationY();
+        ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationY",120f);
+        animator.setDuration(500);
+        animator.start();
     }
-
-    public interface Action
+    public static void translationToAppear(View view)
     {
-        public abstract void act();
-    }
-
-    public static void setAction(Action maction)
-    {
-        action = maction;
+        ObjectAnimator animator=ObjectAnimator.ofFloat(view,"translationY",0f);
+        animator.setDuration(500);
+        animator.start();
     }
 }
