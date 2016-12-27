@@ -64,4 +64,16 @@ public  class ItemAnimition
         animator.setDuration(500);
         animator.start();
     }
+    public static void toolBarDisappear(View view)
+    {
+        ObjectAnimator animator=ObjectAnimator.ofFloat(view,"translationY",-120f);
+        animator.setDuration(500);
+        animator.start();
+    }
+    public static void toolBarAppear(View view)
+    {
+        ObjectAnimator animator=ObjectAnimator.ofFloat(view,"translationY",0f);
+        animator.setDuration(500);
+        animator.start();
+    }
 }

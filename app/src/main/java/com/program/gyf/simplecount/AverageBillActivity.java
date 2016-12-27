@@ -20,6 +20,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -51,6 +52,8 @@ import tool.BitmapHandler;
 import tool.ItemAnimition;
 import tool.SharedPreferenceHelper;
 
+import static android.content.ContentValues.TAG;
+
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
     private SlidingMenu mMenu;
@@ -76,15 +79,20 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     final BillBean bean = new BillBean();
     private File outputImage;
     private Uri imgUri;
+    private Toolbar toolbar;
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         createPathIfNotExits(PHOTO_PATH);
+        dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
+        if(!checkColumnExists(dbHelper.getWritableDatabase(), TABLENAME, "picadress"))//检测数据库版本
+        {
+            deleteAllData();
+        }
         Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
         TextView titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
         mMenu = (SlidingMenu) findViewById(R.id.Menu);
         addBillButton = (FloatingActionButton) findViewById(R.id.floatbutton);
         addBillButton.setOnClickListener(this);
@@ -95,6 +103,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Button settlementButton = (Button) findViewById(R.id.settlemoney);
         settlementButton.setOnClickListener(this);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         showRecyclerView();
         if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName).size()==0)
         {
@@ -131,10 +140,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     if(dy>20)
                     {
                         ItemAnimition.translationToDisapper(addBillButton);
+                        ItemAnimition.toolBarDisappear(toolbar);
+
                     }else if(dy<-10)
                     {
                         ItemAnimition.translationToAppear(addBillButton);
-
+                        ItemAnimition.toolBarAppear(toolbar);
                     }
                 }
             });
@@ -399,8 +410,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         Intent intent = new Intent("com.android.camera.action.CROP");
                         intent.setDataAndType(imageUri, "image/*");
                         intent.putExtra("scale", true);
-                        intent.putExtra("aspectX", 450);//裁切的宽比例
-                        intent.putExtra("aspectY", 199);//裁切的高比例
+                        intent.putExtra("aspectX", 6);//裁切的宽比例
+                        intent.putExtra("aspectY", 3);//裁切的高比例
                         intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                         bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f,  816.0f);//保存原图
                         bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
@@ -428,8 +439,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
                 bean.setPicadress(imgUri.toString());
                 intent.putExtra("scale", true);
-                intent.putExtra("aspectX", 450);//裁切的宽比例
-                intent.putExtra("aspectY", 199);//裁切的高比例
+                intent.putExtra("aspectX", 4);//裁切的宽比例
+                intent.putExtra("aspectY", 3);//裁切的高比例
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, imgUri);
                 startActivityForResult(intent,CROP_PHOTO2);
                 break;
@@ -655,6 +666,24 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
         return true;
 
+    }
+    private boolean checkColumnExists(SQLiteDatabase db, String tableName, String columnName) {
+        boolean result = false ;
+        Cursor cursor = null ;
+
+        try{
+            cursor = db.rawQuery( "select * from sqlite_master where name = ? and sql like ?"
+                    , new String[]{tableName , "%" + columnName + "%"} );
+            result = null != cursor && cursor.moveToFirst() ;
+        }catch (Exception e){
+            Log.e(TAG,"checkColumnExists..." + e.getMessage()) ;
+        }finally{
+            if(null != cursor && !cursor.isClosed()){
+                cursor.close() ;
+            }
+        }
+
+        return result ;
     }
 
 }

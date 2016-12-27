@@ -6,13 +6,66 @@
               android:gravity="center_horizontal"
     >
 
-    <com.flaviofaria.kenburnsview.KenBurnsView
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="500dp"
         android:id="@+id/origin_image"
-        android:scaleType="centerCrop"
         android:transitionName="PicShare"
         android:adjustViewBounds="true"
-        android:src="@mipmap/ic_launcher"/>
+        android:scaleType="centerCrop"
+        android:src="@mipmap/settlebackground"/>
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="30dp"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:text="描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容"
+                style="@style/MainContentStyle"
+                android:textSize="20sp"
+                android:id="@+id/des_bill"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="名字"
+                android:textSize="15sp"
+                android:layout_marginTop="15dp"
+                android:paddingLeft="25dp"
+                android:id="@+id/personame_each_bill"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="15dp"
+                android:paddingLeft="30dp"
+                android:id="@+id/money_each_bill"
+                android:text="XXX￥"/>
+            </LinearLayout>
+
+            <TextView
+                android:text="时间"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:textSize="15sp"
+                android:fontFamily="sans-serif-condensed"
+                android:layout_marginTop="16dp"
+                android:paddingBottom="60dp"
+                android:id="@+id/date_bill"/>
+              </LinearLayout>
+       </ScrollView>
 </LinearLayout>

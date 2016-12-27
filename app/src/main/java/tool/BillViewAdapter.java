@@ -59,11 +59,8 @@ public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHold
     public void onBindViewHolder(MyHolder holder, int position)
     {
         BillBean bean = beanList.get(position);
-        holder.DesInfo.setText(bean.getDescripInfo());
         holder.picInfo.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
         holder.dateInfo.setText(bean.getDateInfo());
-        holder.nameInfo.setText(bean.getName());
-        holder.moneyInfo.setText(bean.getMoneyString()+"￥");
         holder.itemView.setTag(bean);
         holder.itemView.setTag(R.id.pic_address,holder.picInfo);
     }
@@ -102,17 +99,11 @@ public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHold
 
         private TextView dateInfo;
         private ImageView picInfo;
-        private TextView DesInfo;
-        private TextView moneyInfo;
-        private TextView nameInfo;
         public MyHolder(View itemView)
         {
             super(itemView);
             dateInfo = (TextView) itemView.findViewById(R.id.date_bill);
             picInfo = (ImageView) itemView.findViewById(R.id.pic_address);
-            DesInfo = (TextView) itemView.findViewById(R.id.des_bill);
-            moneyInfo = (TextView) itemView.findViewById(R.id.money_each_bill);
-            nameInfo = (TextView) itemView.findViewById(R.id.personame_each_bill);
         }
     }
 

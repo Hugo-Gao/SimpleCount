@@ -34,7 +34,8 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
 {
     private DBOpenHelper dbHelper;
     private TextView moneynumText;
-    private  int moneySum;
+    private int moneySum;
+    private double moneyAver;
     final String TABLENAME = "BillDB";
     private Map<String, Integer> personBillMap;
     private FloatingActionButton FAB;
@@ -59,6 +60,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
         moneynumText = (TextView) findViewById(R.id.bill_sum);
         showInformation();
+        Log.d("haha", "person num is " + personBillMap.size());
         showCountEveryBody();
         //AverageEveryBody();
     }
@@ -67,9 +69,8 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
     {
         LinearLayout layoutwrapper = (LinearLayout) findViewById(R.id.textAddWrapper);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        double moneyAverage =  moneySum / personBillMap.size();
         TextView tv = new TextView(this);
-        tv.setText("平均每人支出"+moneyAverage);
+        tv.setText("平均每人支出"+moneyAver);
         tv.setPadding(30,10,0,0);
         tv.setTextSize(30);
         layoutwrapper.addView(tv,params);
@@ -81,10 +82,12 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
      */
     private void showCountEveryBody()
     {
+
         List<String> nameLsit;
         int money=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         nameLsit = SharedPreferenceHelper.getNameFromSharedPreferences(SettleMoneyActivity.this, "NameList");
+        moneyAver = moneySum / nameLsit.size();
         for (String name: nameLsit)
         {
             Cursor cursor=db.query(TABLENAME,null,"name = ?",new String[]{name},null, null, null);
@@ -95,8 +98,19 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
             }
             LinearLayout layoutwrapper = (LinearLayout) findViewById(R.id.textAddWrapper);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            String AAString;
             TextView tv = new TextView(this);
-            tv.setText(name+"目前支出了"+money+"元");
+            if(money>moneyAver)
+            {
+                AAString=",还需收入"+(money-moneyAver)+"￥";
+            }else if(money<moneyAver)
+            {
+                AAString=",还需支出"+(moneyAver-money)+"￥";
+            }else
+            {
+                AAString="";
+            }
+            tv.setText(name+"目前支出了"+money+"元"+AAString);
             tv.setPadding(30,10,0,0);
             tv.setTextSize(20);
             tv.setTypeface(Typeface.SANS_SERIF);

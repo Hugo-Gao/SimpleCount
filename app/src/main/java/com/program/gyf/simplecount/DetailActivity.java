@@ -4,16 +4,17 @@ import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import database.DBOpenHelper;
+import tool.BitmapHandler;
 
 /**
  * Created by Administrator on 2016/11/6.
@@ -22,6 +23,10 @@ import database.DBOpenHelper;
 public class DetailActivity extends Activity
 {
     private ImageView oldPicView;
+    private TextView describeText;
+    private TextView nameText;
+    private TextView moneyText;
+    private TextView dateText;
     private DBOpenHelper dbHelper;
     final String TABLENAME = "BillDB";
 
@@ -31,15 +36,25 @@ public class DetailActivity extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.detail_view_layout);
         oldPicView = (ImageView) findViewById(R.id.origin_image);
+        describeText = (TextView) findViewById(R.id.des_bill);
+        nameText = (TextView) findViewById(R.id.personame_each_bill);
+        moneyText = (TextView) findViewById(R.id.money_each_bill);
+        dateText = (TextView) findViewById(R.id.date_bill);
         dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
         Intent intent = getIntent();
         String beanInfo = intent.getStringExtra("TheBeanInfo");
         BillBean bean=SearchBeanByDateInfo(beanInfo);
-        if (bean.getPicadress() != null)
+        if (bean.getOldpicInfo() != null)
         {
-            oldPicView.setImageURI(Uri.parse(bean.getPicadress()));
+            oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getOldpicInfo()));
+        }else
+        {
+            oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
         }
-
+        describeText.setText(bean.getDescripInfo());
+        nameText.setText(bean.getName());
+        moneyText.setText("￥" + bean.getMoneyString());
+        dateText.setText(bean.getDateInfo());
 
     }
 

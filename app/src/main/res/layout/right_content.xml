@@ -13,8 +13,9 @@
                     <android.support.v7.widget.Toolbar
                         android:layout_width="match_parent"
                         android:layout_height="25dp"
-                        android:background="#1976D2"
+                        android:background="@color/mainColor"
                         android:elevation="4dp"
+                        android:id="@+id/toolbar"
                         >
 
                         <Button
