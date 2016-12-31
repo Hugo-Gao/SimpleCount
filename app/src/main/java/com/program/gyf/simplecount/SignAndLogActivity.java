@@ -190,7 +190,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
                             sharedPreferences = getSharedPreferences("UserIDAndPassword", MODE_PRIVATE);
                             SharedPreferences.Editor editor = sharedPreferences.edit();
                             editor.putString("username", userName);
-                            editor.commit();
+                            editor.apply();
                         }
 
                     }
@@ -229,6 +229,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
 
     private void playAndIntent(View view)
     {
+        saveLogStatus();
         ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationY",-1000f);
         animator.setDuration(800);
         animator.addListener(new AnimatorListenerAdapter()
@@ -241,6 +242,18 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
             }
         });
         animator.start();
+
+    }
+
+    /**
+     * 记录用户是否登录
+     */
+    private void saveLogStatus()
+    {
+        SharedPreferences sps = getSharedPreferences("userLogStatus",MODE_PRIVATE);
+        SharedPreferences.Editor editor = sps.edit();
+        editor.putBoolean("LogStatus", true);
+        editor.apply();
 
     }
 }

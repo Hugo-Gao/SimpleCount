@@ -96,11 +96,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         mMenu = (SlidingMenu) findViewById(R.id.Menu);
         addBillButton = (FloatingActionButton) findViewById(R.id.floatbutton);
         addBillButton.setOnClickListener(this);
-        Button billButton1 = (Button) findViewById(R.id.bill_1);
-        billButton1.setOnClickListener(this);
         Button addPersonButton = (Button) findViewById(R.id.add_people_button);
         addPersonButton.setOnClickListener(this);
         Button settlementButton = (Button) findViewById(R.id.settlemoney);
+        Button returnLogButton = (Button) findViewById(R.id.returnLog);
+        returnLogButton.setOnClickListener(this);
         settlementButton.setOnClickListener(this);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -180,8 +180,29 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 mMenu.toggleMenu();
                 showMateriaDialog();
                 break;
-            case R.id.bill_1:
-
+            case R.id.returnLog:
+                final MaterialDialog confirmReturnDialog = new MaterialDialog(this);
+                confirmReturnDialog.setTitle("你确认要退出吗");
+                confirmReturnDialog.setCanceledOnTouchOutside(false);
+                confirmReturnDialog.setPositiveButton("确定", new View.OnClickListener()
+                {
+                    @Override
+                    public void onClick(View v)
+                    {
+                        Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
+                        startActivity(intent);
+                        AverageBillActivity.this.finish();
+                    }
+                });
+                confirmReturnDialog.setNegativeButton("取消", new View.OnClickListener()
+                {
+                    @Override
+                    public void onClick(View v)
+                    {
+                        confirmReturnDialog.dismiss();
+                    }
+                });
+                confirmReturnDialog.show();
                 break;
             case R.id.floatbutton://此按钮即是添加账单按钮
                 if(!(SharedPreferenceHelper.IsNameNULL(this,SharedPreferenceName)))
