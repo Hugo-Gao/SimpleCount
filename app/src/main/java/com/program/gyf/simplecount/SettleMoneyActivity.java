@@ -36,7 +36,8 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
     private TextView moneynumText;
     private int moneySum;
     private double moneyAver;
-    final String TABLENAME = "BillDB";
+    private String TABLENAME ;
+    private String SPName ;
     private Map<String, Integer> personBillMap;
     private FloatingActionButton FAB;
     @Override
@@ -57,7 +58,9 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         FAB = (FloatingActionButton) findViewById(R.id.floatingActionButton);
         FAB.setOnClickListener(this);
             personBillMap = new HashMap<>();
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
+        TABLENAME = SharedPreferenceHelper.getTableNameBySP(SettleMoneyActivity.this);
+        SPName = TABLENAME;
+        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
         moneynumText = (TextView) findViewById(R.id.bill_sum);
         showInformation();
         Log.d("haha", "person num is " + personBillMap.size());
@@ -86,7 +89,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         List<String> nameLsit;
         int money=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        nameLsit = SharedPreferenceHelper.getNameFromSharedPreferences(SettleMoneyActivity.this, "NameList");
+        nameLsit = SharedPreferenceHelper.getNameFromSharedPreferences(SettleMoneyActivity.this, SPName);
         moneyAver = moneySum / nameLsit.size();
         for (String name: nameLsit)
         {

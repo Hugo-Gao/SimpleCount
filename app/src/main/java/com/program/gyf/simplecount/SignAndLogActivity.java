@@ -18,6 +18,7 @@ import android.widget.TextView;
 import java.io.IOException;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
+import database.DBOpenHelper;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -39,6 +40,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
     private TextInputEditText passWordEdit;
     private SharedPreferences sharedPreferences;
     private CardView cardView;
+    private String username;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -60,6 +62,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
     public void onClick(View v)
     {
         String userName = userNameEdit.getText().toString();
+        username = userName;
         String passWord = passWordEdit.getText().toString();
         if(userName.equals("")||passWord.equals(""))
         {
@@ -69,11 +72,11 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
         switch (v.getId())
         {
             case R.id.log_Button:
-                String url = "http://192.168.253.1:5000/user";/*在此处改变你的服务器地址*/
+                String url = "http://192.168.253.1:8080/user";/*在此处改变你的服务器地址*/
                 getCheckFromServer(url,userName,passWord);
                 break;
             case R.id.Sign_Button:
-                String url2 = "http://192.168.253.1:5000/register";/*在此处改变你的服务器地址*/
+                String url2 = "http://192.168.253.1:8080/register";/*在此处改变你的服务器地址*/
                 registeNameWordToServer(url2,userName,passWord);
                 break;
         }
@@ -229,6 +232,8 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
 
     private void playAndIntent(View view)
     {
+        DBOpenHelper dbHelper = new DBOpenHelper(this, "friends.db", null, 1,username);
+        dbHelper.getWritableDatabase();
         saveLogStatus();
         ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationY",-1000f);
         animator.setDuration(800);
@@ -239,6 +244,21 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
             {
                 Intent intent = new Intent(SignAndLogActivity.this, AverageBillActivity.class);
                 startActivity(intent);
+                new Thread(new Runnable()//在后台线程中关闭此活动
+                {
+                    @Override
+                    public void run()
+                    {
+                        try
+                        {
+                            Thread.sleep(1000);
+                            SignAndLogActivity.this.finish();
+                        } catch (InterruptedException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
             }
         });
         animator.start();

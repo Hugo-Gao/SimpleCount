@@ -15,6 +15,7 @@ import java.util.List;
 
 import database.DBOpenHelper;
 import tool.BitmapHandler;
+import tool.SharedPreferenceHelper;
 
 /**
  * Created by Administrator on 2016/11/6.
@@ -28,7 +29,7 @@ public class DetailActivity extends Activity
     private TextView moneyText;
     private TextView dateText;
     private DBOpenHelper dbHelper;
-    final String TABLENAME = "BillDB";
+    public String TABLENAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -40,7 +41,8 @@ public class DetailActivity extends Activity
         nameText = (TextView) findViewById(R.id.personame_each_bill);
         moneyText = (TextView) findViewById(R.id.money_each_bill);
         dateText = (TextView) findViewById(R.id.date_bill);
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
+        TABLENAME = SharedPreferenceHelper.getTableNameBySP(DetailActivity.this);
+        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
         Intent intent = getIntent();
         String beanInfo = intent.getStringExtra("TheBeanInfo");
         BillBean bean=SearchBeanByDateInfo(beanInfo);

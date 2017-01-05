@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
@@ -18,9 +19,11 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,6 +40,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,9 +49,17 @@ import java.util.Date;
 import java.util.List;
 
 import View.SlidingMenu;
+import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
 import id.zelory.compressor.Compressor;
 import me.drakeet.materialdialog.MaterialDialog;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.FormBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okio.ByteString;
 import tool.BillViewAdapter;
 import tool.BitmapHandler;
 import tool.ItemAnimition;
@@ -56,14 +69,15 @@ import static android.content.ContentValues.TAG;
 
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
+    public  String TABLENAME;
     private SlidingMenu mMenu;
     private FloatingActionButton addBillButton;
     private FloatingActionButton numOfManButton;
     private EditText editText;//这个编辑框是在初始化的对话框的
     private DBOpenHelper dbHelper;
-    final String TABLENAME = "BillDB";
     private List<BillBean> beanList=new ArrayList<>();
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private BillViewAdapter adapter;
     private RecyclerView.LayoutManager layoutManager;
     private EditText moneyEditText;//创建账单中的金额输入框
@@ -72,7 +86,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private static final int CHOOSE_PHOTO=2;
     private static final int CROP_PHOTO = 3;
     private static final int CROP_PHOTO2 = 4;
-    private static final String SharedPreferenceName = "NameList";
+    private static  String SharedPreferenceName;
     private final String PHOTO_PATH = Environment.getExternalStorageDirectory() + "/ASimpleCount/";
     private Uri imageUri;
     MaterialDialog materialDialog = new MaterialDialog(this);//添加人数的浮动框
@@ -80,16 +94,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private File outputImage;
     private Uri imgUri;
     private Toolbar toolbar;
+    private final String postDataUri="http://192.168.253.1:8080/postdata";
+    private final String getDataUri="http://192.168.253.1:8080/getdata";
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         createPathIfNotExits(PHOTO_PATH);
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1);
-        if(!checkColumnExists(dbHelper.getWritableDatabase(), TABLENAME, "picadress"))//检测数据库版本
-        {
-            deleteAllData();
-        }
+        TABLENAME=SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
+        SharedPreferenceName = TABLENAME;
+        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
+        SQLiteDatabase db=dbHelper.getWritableDatabase();
+        dbHelper.createTable(db);
         Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
         TextView titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
@@ -103,13 +119,86 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         returnLogButton.setOnClickListener(this);
         settlementButton.setOnClickListener(this);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
+        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_layout);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener()
+        {
+            @Override
+            public void onRefresh()
+            {
+                List<BillBean> beanList = getBeanFromDataBase();
+                postToRemoteDB(beanList);
+            }
+        });
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         showRecyclerView();
-        if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName).size()==0)
+        /*if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName).size()==0)
         {
             showMateriaDialog();
-        }
+        }*/
     }
+
+
+    /**
+     * 此函数作用是将本地数据库与服务器数据库进行同步，更新服务器端数据库
+     */
+    private void postToRemoteDB(List<BillBean> beanList)
+    {
+        OkHttpClient client = new OkHttpClient();
+        final int size = beanList.size();
+        for(int i=0;i<size;i++)
+        {
+            final int count=i;
+            FormBody.Builder formBuilder=new FormBody.Builder();
+            formBuilder.add("username",TABLENAME);//TABLENAME就是username
+            formBuilder.add("name", beanList.get(i).getName());
+            formBuilder.add("money",beanList.get(i).getMoneyString());
+            formBuilder.add("describe",beanList.get(i).getDescripInfo());
+            formBuilder.add("date",beanList.get(i).getDateInfo());
+            formBuilder.add("picinfo", Base64.encodeToString(beanList.get(i).getPicInfo(), Base64.DEFAULT));
+            formBuilder.add("oldpicinfo", Base64.encodeToString(beanList.get(i).getOldpicInfo(), Base64.DEFAULT));
+            Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
+            Call call = client.newCall(request);
+            call.enqueue(new Callback()
+            {
+                @Override
+                public void onFailure(Call call, IOException e)
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                            swipeRefreshLayout.setRefreshing(false);
+                        }
+                    });
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
+                {
+                    Log.d("haha", "同步第" + count + "条数据成功");
+                    if(count==size-1)
+                    {
+                        runOnUiThread(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                swipeRefreshLayout.setRefreshing(false);
+                                Snackbar.make(recyclerView,"同步完成",Snackbar.LENGTH_SHORT).show();
+                            }
+                        });
+
+                    }
+                }
+            });
+
+        }
+
+
+    }
+
     private void showRecyclerView()
     {
         beanList=getBeanFromDataBase();
@@ -151,6 +240,111 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             });
 
         }
+        else//如果本地数据库没有数据，则尝试从服务器下载数据
+        {
+            Log.d("haha", "从服务器拉取数据");
+            getBeanFromServer();
+        }
+    }
+
+    private void getBeanFromServer()
+    {
+        final SweetAlertDialog pDialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.PROGRESS_TYPE);
+        pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+        pDialog.setTitleText("正在服务器端获取数据");
+        pDialog.setCancelable(false);
+        pDialog.show();
+        OkHttpClient client = new OkHttpClient();
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        formBuilder.add("username", TABLENAME);
+        Request request = new Request.Builder().url(getDataUri).post(formBuilder.build()).build();
+        Call call = client.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        pDialog.dismiss();
+                        SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.WARNING_TYPE);
+                        dialog.setTitleText("服务器未连接！！");
+                        dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+                        dialog.setCancelable(true);
+                        dialog.show();
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String data = response.body().string();
+                if(data.equals(""))
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            pDialog.dismiss();
+                            SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.NORMAL_TYPE);
+                            dialog.setTitleText("服务器上没有数据");
+                            dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+                            dialog.setCancelable(true);
+                            dialog.show();
+                        }
+                    });
+                    return;
+                }
+                Log.d("haha", data);
+                try
+                {
+                    JSONObject object = new JSONObject(data);
+                    Log.d("haha", "从服务器获取到了" + object.length() + "条数据");
+                    for(int i=1;i<=object.length();i++)
+                    {
+                        JSONObject itemObject = object.getJSONObject(String.valueOf(i));
+                        String name = (String) itemObject.get("name");
+                        int money = Integer.parseInt((String) itemObject.get("money"));
+                        String describe=(String) itemObject.get("describe");
+                        String date=(String) itemObject.get("date");
+                        String oldpic=(String) itemObject.get("oldpic");
+                        String pic=(String) itemObject.get("pic");
+                        //将图片转换为二进制
+                        ByteString byteString = ByteString.decodeBase64(pic);
+                        byte[] picInfo = byteString.toByteArray();
+                        ByteString byteString2 = ByteString.decodeBase64(oldpic);
+                        byte[] oldpicInfo = byteString2.toByteArray();
+                        BillBean newBean = new BillBean(date, picInfo, oldpicInfo, describe, name, money,"kong");
+                        saveBeanToDataBase(newBean);
+                        Log.d("haha", "从JSON中获得的数据是" + name + "的" + ",money is " + money + " describe is " + describe + " date is " + date);
+                    }
+                } catch (Exception e)
+                {
+                    e.printStackTrace();
+                    Log.d("haha", "解析JSON时出现错误");
+                }
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        showRecyclerView();
+                        Log.d("haha", "改变对话框文字");
+                        pDialog.dismiss();
+                        SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.SUCCESS_TYPE);
+                        dialog.setTitleText("从服务器获取数据成功");
+                        dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+                        dialog.setCancelable(true);
+                        dialog.show();
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -502,7 +696,25 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("oldpic", bean.getOldpicInfo());
         values.put("date",bean.getDateInfo());
         values.put("picadress", bean.getPicadress());
+        Log.d("haha", "成功存入" + bean.toString());
         db.insert(TABLENAME, null, values);
+        values.clear();
+        db.close();
+
+    }
+    private void saveBeanToDataBase(BillBean bean)
+    {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("name",bean.getName());
+        values.put("money",bean.getMoney());
+        values.put("descripe",bean.getDescripInfo());
+        values.put("pic", bean.getPicInfo());
+        values.put("oldpic", bean.getOldpicInfo());
+        values.put("date",bean.getDateInfo());
+        values.put("picadress", bean.getPicadress());
+        db.insert(TABLENAME, null, values);
+        Log.d("haha", "成功存入" + bean.toString());
         values.clear();
         db.close();
 

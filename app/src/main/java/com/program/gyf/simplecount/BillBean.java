@@ -24,14 +24,15 @@ public class BillBean
         this.picadress = picadress;
     }
 
-    public BillBean(String dateInfo, byte[] picInfo, String descripInfo, String name, int money)
+    public BillBean(String dateInfo, byte[] picInfo, byte[] oldpicInfo,String descripInfo, String name, int money,String address)
     {
         this.dateInfo = dateInfo;
         this.picInfo = picInfo;
         this.descripInfo = descripInfo;
         this.name = name;
         this.money = money;
-
+        this.oldpicInfo = oldpicInfo;
+        this.picadress = address;
     }
 
     public BillBean()

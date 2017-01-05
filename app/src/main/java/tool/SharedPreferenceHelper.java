@@ -45,4 +45,10 @@ public class SharedPreferenceHelper
          editor.apply();
          return true;
     }
+    public static String getTableNameBySP(Context context)
+    {
+        SharedPreferences preference = context.getSharedPreferences("UserIDAndPassword", MODE_PRIVATE);
+        String username = preference.getString("username", "");
+        return username;
+    }
 }
