@@ -2,10 +2,9 @@ package tool;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 
 import static android.content.Context.MODE_PRIVATE;
@@ -16,21 +15,64 @@ import static android.content.Context.MODE_PRIVATE;
 
 public class SharedPreferenceHelper
 {
-    public static  List<String> getNameFromSharedPreferences(Context context,String SPName)//从SharedPreferences取出名字
+
+    public static void SaveNameToSharedPreference(Context context,String nameString,String SPName,String billName)
     {
         SharedPreferences preference = context.getSharedPreferences(SPName, MODE_PRIVATE);
-        HashMap<String,String> map= (HashMap<String, String>) preference.getAll();
-        Collection<String> collection = map.values();
-        List<String> nameList=new ArrayList<String>();
-        for (String name : collection)
+        SharedPreferences.Editor editor = preference.edit();
+        editor.putString(billName, nameString);//以billName为键存放出行人名字
+        Log.d("haha", nameString + "保存完毕");
+        editor.apply();
+    }
+
+    public static  List<String> getNameFromSharedPreferences(Context context,String SPName,String billName)//从SharedPreferences取出名字
+    {
+        SharedPreferences preference = context.getSharedPreferences(SPName, MODE_PRIVATE);
+        List<String> nameList=new ArrayList<>();
+        String nameString=preference.getString(billName,"");
+        if(nameString.contains("，"))
         {
+            nameString =nameString.replace("，", ",");
+            Log.d("haha", "名字字符串中有中文逗号，已修改为英文逗号");
+        }
+        String[] nameStringArray = nameString.split(",");
+        for (String name : nameStringArray)
+        {
+            Log.d("haha", "取出了出游人" + name);
             nameList.add(name);
         }
         return nameList;
     }
-    public static boolean IsNameNULL(Context context,String SPName)
+
+    public static String getNameStringFromSharedPreferences(Context context,String SPName,String billName)
     {
-        if(getNameFromSharedPreferences(context,SPName).size()==0)
+        SharedPreferences preference = context.getSharedPreferences(SPName, MODE_PRIVATE);
+        String nameString=preference.getString(billName,"");
+        if(nameString.equals(""))
+        {
+            Log.d("haha", "获取出游人为空");
+        }
+        return nameString;
+    }
+
+    public static void saveRealBillNameToSharedPreferences(Context context,String BillName)
+    {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("realBillNameSP", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("BillName", BillName);
+        editor.apply();
+    }
+
+    public static String getRealBillNameFromSharedPreferences(Context context)
+    {
+        SharedPreferences preference = context.getSharedPreferences("realBillNameSP", MODE_PRIVATE);
+        String billName = preference.getString("BillName", "");
+        return billName;
+    }
+
+    public static boolean IsNameNULL(Context context,String SPName,String billName)
+    {
+        if(getNameFromSharedPreferences(context,SPName,billName).size()==0)
         {
             return true;
         }

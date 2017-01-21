@@ -33,6 +33,14 @@
                             android:id="@+id/title"
                             android:layout_gravity="center_horizontal"
                             />
+                        <Button
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:background="@mipmap/ok"
+                            android:layout_gravity="right"
+                            android:id="@+id/finish_bill"
+                            android:layout_marginRight="10dp"
+                            />
                     </android.support.v7.widget.Toolbar>
 
     <FrameLayout

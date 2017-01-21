@@ -54,11 +54,17 @@ public class BitmapHandler
 
     public static Bitmap convertByteToBitmap(byte[] data)
     {
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inSampleSize=2;//图片高宽度都为原来的二分之一，即图片大小为原来的大小的四分之一
-        opts.inTempStorage = new byte[5*1024]; //设置16MB的临时存储空间（不过作用还没看出来，待验证）
-        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, opts);
-        return bitmap;
+        if(data!=null)
+        {
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = 2;//图片高宽度都为原来的二分之一，即图片大小为原来的大小的四分之一
+            opts.inTempStorage = new byte[5 * 1024]; //设置16MB的临时存储空间（不过作用还没看出来，待验证）
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, opts);
+            return bitmap;
+        }else
+        {
+            return null;
+        }
     }
     public static Bitmap bitmpCulate(byte[] data){
         BitmapFactory.Options opts = new BitmapFactory.Options();

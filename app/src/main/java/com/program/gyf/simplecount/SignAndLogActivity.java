@@ -72,11 +72,11 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
         switch (v.getId())
         {
             case R.id.log_Button:
-                String url = "http://192.168.253.1:8080/user";/*在此处改变你的服务器地址*/
+                String url = "http://172.27.35.1:8070/user";/*在此处改变你的服务器地址*/
                 getCheckFromServer(url,userName,passWord);
                 break;
             case R.id.Sign_Button:
-                String url2 = "http://192.168.253.1:8080/register";/*在此处改变你的服务器地址*/
+                String url2 = "http://172.27.35.1:8070/register";/*在此处改变你的服务器地址*/
                 registeNameWordToServer(url2,userName,passWord);
                 break;
         }

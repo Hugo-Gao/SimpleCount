@@ -5,7 +5,6 @@ import android.app.ActivityOptions;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -40,17 +39,21 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import View.SlidingMenu;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
+import database.TableListDBHelper;
 import id.zelory.compressor.Compressor;
 import me.drakeet.materialdialog.MaterialDialog;
 import okhttp3.Call;
@@ -60,25 +63,31 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okio.ByteString;
-import tool.BillViewAdapter;
 import tool.BitmapHandler;
+import tool.CardViewAdapter;
 import tool.ItemAnimition;
 import tool.SharedPreferenceHelper;
 
 import static android.content.ContentValues.TAG;
+import static tool.AcivityHelper.finishThisActivity;
+import static tool.SharedPreferenceHelper.SaveNameToSharedPreference;
+import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
+import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
+import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
 
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
-    public  String TABLENAME;
+    public  String USERNAME;
     private SlidingMenu mMenu;
     private FloatingActionButton addBillButton;
     private FloatingActionButton numOfManButton;
     private EditText editText;//这个编辑框是在初始化的对话框的
     private DBOpenHelper dbHelper;
+    private TableListDBHelper tableNameDBHelper;
     private List<BillBean> beanList=new ArrayList<>();
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
-    private BillViewAdapter adapter;
+    private CardViewAdapter adapter;
     private RecyclerView.LayoutManager layoutManager;
     private EditText moneyEditText;//创建账单中的金额输入框
     private EditText descripeEditText;//创建账单中的描述输入框
@@ -93,29 +102,60 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     final BillBean bean = new BillBean();
     private File outputImage;
     private Uri imgUri;
+    private int i;
     private Toolbar toolbar;
-    private final String postDataUri="http://192.168.253.1:8080/postdata";
-    private final String getDataUri="http://192.168.253.1:8080/getdata";
+    private final String postDataUri="http://172.27.35.1:8070/postdata";
+    private final String getBillsNameUri="http://172.27.35.1:8070/getbillsname";
+    private final String postBillNameListUri = "http://172.27.35.1:8070/postBillList";
+    private final String getDataUri = "http://172.27.35.1:8070/getdata";
+    private TextView titleText;
+    private Button finish_btn;
+    private TextView viewAllBillText;
+    private boolean refreshFinish;
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         createPathIfNotExits(PHOTO_PATH);
-        TABLENAME=SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
-        SharedPreferenceName = TABLENAME;
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
-        SQLiteDatabase db=dbHelper.getWritableDatabase();
-        dbHelper.createTable(db);
+        Intent intent = getIntent();
+        refreshFinish = false;
+        if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
+        {
+            Toast.makeText(this, "billName is "+intent.getStringExtra("billName"), Toast.LENGTH_SHORT).show();
+            saveRealBillNameToSharedPreferences(this,intent.getStringExtra("billName"));
+        }else
+        {
+            Log.d("haha", "没有传入数据");
+        }
+        USERNAME=SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
+        Log.d("haha", "用户名" + USERNAME);
+        SharedPreferenceName = USERNAME;
+
+
+        tableNameDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
+        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        tableNameDBHelper.create(db);
+        db.close();
         Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
-        TextView titleText = (TextView) findViewById(R.id.title);
+
+         titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
+        if(!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
+        {
+            titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        }
+
+        finish_btn = (Button) findViewById(R.id.finish_bill);
+        finish_btn.setOnClickListener(this);
+        viewAllBillText = (TextView) findViewById(R.id.view_all_bills);
+        viewAllBillText.setOnClickListener(this);
         mMenu = (SlidingMenu) findViewById(R.id.Menu);
         addBillButton = (FloatingActionButton) findViewById(R.id.floatbutton);
         addBillButton.setOnClickListener(this);
-        Button addPersonButton = (Button) findViewById(R.id.add_people_button);
+        TextView addPersonButton = (TextView) findViewById(R.id.add_people_button);
         addPersonButton.setOnClickListener(this);
-        Button settlementButton = (Button) findViewById(R.id.settlemoney);
-        Button returnLogButton = (Button) findViewById(R.id.returnLog);
+        TextView settlementButton = (TextView) findViewById(R.id.settlemoney);
+        TextView returnLogButton = (TextView) findViewById(R.id.returnLog);
         returnLogButton.setOnClickListener(this);
         settlementButton.setOnClickListener(this);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
@@ -125,98 +165,194 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onRefresh()
             {
-                List<BillBean> beanList = getBeanFromDataBase();
-                postToRemoteDB(beanList);
+                postToRemoteDB();
             }
         });
         toolbar = (Toolbar) findViewById(R.id.toolbar);
-        showRecyclerView();
-        /*if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName).size()==0)
+        if(checkFirstLog())
+        {
+            getBeanFromServer();
+        }
+        if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName,getRealBillNameFromSharedPreferences(this)).size()==0)
         {
             showMateriaDialog();
-        }*/
+        }
+        showRecyclerView();
     }
 
+    private boolean checkFirstLog()
+    {
+        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
+        if (cursor.getCount()==0)
+        {
+            return true;
+        }else
+        {
+            return false;
+        }
+    }
 
     /**
-     * 此函数作用是将本地数据库与服务器数据库进行同步，更新服务器端数据库
+     * 此函数作用是将本地数据库与服务器数据库进行同步，更新服务器端数据库,分两轮传送
+     * 第一轮postBillNameListToDB()传送该用户的所有账单名称,每个账单的出行人
+     * 第二轮将每个账本的每一条信息依次传送
      */
-    private void postToRemoteDB(List<BillBean> beanList)
+    private void postToRemoteDB()
     {
-        OkHttpClient client = new OkHttpClient();
-        final int size = beanList.size();
-        for(int i=0;i<size;i++)
+        List<String> billNameList=getBillList();//获取所有账单名称
+        postBillNameListToDB(billNameList,USERNAME);
+        final int[] count = {0};
+        int sumOfBill=0;
+        for (int index =0;index<billNameList.size();index++)
         {
-            final int count=i;
-            FormBody.Builder formBuilder=new FormBody.Builder();
-            formBuilder.add("username",TABLENAME);//TABLENAME就是username
-            formBuilder.add("name", beanList.get(i).getName());
-            formBuilder.add("money",beanList.get(i).getMoneyString());
-            formBuilder.add("describe",beanList.get(i).getDescripInfo());
-            formBuilder.add("date",beanList.get(i).getDateInfo());
-            formBuilder.add("picinfo", Base64.encodeToString(beanList.get(i).getPicInfo(), Base64.DEFAULT));
-            formBuilder.add("oldpicinfo", Base64.encodeToString(beanList.get(i).getOldpicInfo(), Base64.DEFAULT));
-            Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
-            Call call = client.newCall(request);
-            call.enqueue(new Callback()
+            final int count1 = index+1;
+            final String billName = billNameList.get(index);
+            final List<BillBean> beanitemList=getBeanFromDataBase(billName);
+            final int size = beanitemList.size();
+            for(int i=0;i<size;i++)
             {
-                @Override
-                public void onFailure(Call call, IOException e)
+                sumOfBill = billNameList.size() * size;
+                OkHttpClient client = new OkHttpClient();
+                final int count2=i+1;
+                FormBody.Builder formBuilder=new FormBody.Builder();
+                formBuilder.add("username",USERNAME);//USERNAME就是username
+                formBuilder.add("billname", billName);
+                formBuilder.add("name", beanitemList.get(i).getName());
+                formBuilder.add("money",beanitemList.get(i).getMoneyString());
+                formBuilder.add("describe",beanitemList.get(i).getDescripInfo());
+                formBuilder.add("date",beanitemList.get(i).getDateInfo());
+                formBuilder.add("picinfo", Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT));
+                formBuilder.add("oldpicinfo", Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT));
+                Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
+                Call call = client.newCall(request);
+                call.enqueue(new Callback()
                 {
-                    runOnUiThread(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
-                            swipeRefreshLayout.setRefreshing(false);
-                        }
-                    });
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) throws IOException
-                {
-                    Log.d("haha", "同步第" + count + "条数据成功");
-                    if(count==size-1)
+                    @Override
+                    public void onFailure(Call call, final IOException e)
                     {
                         runOnUiThread(new Runnable()
                         {
                             @Override
                             public void run()
                             {
-                                swipeRefreshLayout.setRefreshing(false);
-                                Snackbar.make(recyclerView,"同步完成",Snackbar.LENGTH_SHORT).show();
+                                if(e.toString()!="java.net.SocketTimeoutException: timeout")
+                                {
+                                    Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                                    Log.d("haha", e.toString());
+                                }
+                                count[0]++;
                             }
                         });
-
                     }
-                }
-            });
 
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException
+                    {
+                        Log.d("haha", "同步"+billName+"第" + count2 + "条数据成功");
+                        count[0]++;
+                    }
+                });
+
+            }
         }
+        final int finalSumOfBill = sumOfBill;
+        final Thread thread=new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                while(finalSumOfBill != count[0])
+                {
+
+                }
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        swipeRefreshLayout.setRefreshing(false);
+                        Snackbar.make(recyclerView,"同步成功",Snackbar.LENGTH_SHORT).show();
+                    }
+                });
+
+            }
+        });
+        thread.start();
 
 
     }
 
+
+    private void postBillNameListToDB(final List<String> billNameList,String UserName)//一次多波向服务器传送数据
+    {
+
+        OkHttpClient client = new OkHttpClient();
+        int i=0;
+        for (final String billName : billNameList)
+        {
+            String touristsString = getNameStringFromSharedPreferences(this, UserName, billName);
+            i++;
+            final int count=i;
+            FormBody.Builder formBuilder = new FormBody.Builder();
+            formBuilder.add("billName",billName);
+            formBuilder.add("userName", UserName);
+            formBuilder.add("touristsString", touristsString);
+            Request request = new Request.Builder().url(postBillNameListUri).post(formBuilder.build()).build();
+            Call call = client.newCall(request);
+            call.enqueue(new Callback()
+            {
+                @Override
+                public void onFailure(Call call, IOException e)
+                {
+                    Log.d("haha", "传送billNameList和tourists失败");
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
+                {
+                    if (count == billNameList.size())
+                    {
+                        Log.d("haha", "billNameList和tourists传送完毕");
+                    }
+                }
+            });
+        }
+    }
+
+    private List<String> getBillList()
+    {
+        List<String> list = new ArrayList<>();
+        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
+        while (cursor.moveToNext())
+        {
+            String name = cursor.getString(cursor.getColumnIndex("tableName"));
+            Log.d("haha", "账本名为" + name);
+            list.add(name);
+        }
+        cursor.close();
+        db.close();
+        return list;
+    }
+
     private void showRecyclerView()
     {
-        beanList=getBeanFromDataBase();
+        beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        Log.d("haha", "数据库里有" + beanList.size() + "条数据");
         if(beanList.size()!=0)
         {
             layoutManager = new LinearLayoutManager(this);
             recyclerView.setLayoutManager(layoutManager);
-            adapter = new BillViewAdapter(beanList, this);
-            adapter.setOnItemClickListener(new BillViewAdapter.onRecyclerViewItemClickListen()
+            adapter = new CardViewAdapter(beanList, this);
+            adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
             {
                 @Override
                 public void onItemClick(View view, BillBean bean,ImageView imageView)
                 {
-                    Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
-                    i.putExtra("TheBeanInfo", bean.getDateInfo());
-                    String transitionName = "PicShare";
-                    ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
-                    startActivity(i, transitionActivityOptions.toBundle());
+                    intentToDetailActivity(bean, imageView);
+
                 }
             });
             recyclerView.setAdapter(adapter);
@@ -240,27 +376,41 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             });
 
         }
-        else//如果本地数据库没有数据，则尝试从服务器下载数据
+        /*else//如果本地数据库没有数据，则尝试从服务器下载数据
         {
             Log.d("haha", "从服务器拉取数据");
             getBeanFromServer();
-        }
+        }*/
     }
 
+    private void intentToDetailActivity( BillBean bean,ImageView imageView)
+    {
+        Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
+        i.putExtra("TheBeanInfo", bean.getDateInfo());
+        i.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        String transitionName = "PicShare";
+        ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
+        startActivity(i, transitionActivityOptions.toBundle());
+    }
+
+
+    /**
+     * 此方法要重写!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     */
     private void getBeanFromServer()
     {
         final SweetAlertDialog pDialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.PROGRESS_TYPE);
         pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
-        pDialog.setTitleText("正在服务器端获取数据");
-        pDialog.setCancelable(false);
+        pDialog.setTitleText("正在从服务器端获取数据");
         pDialog.show();
         OkHttpClient client = new OkHttpClient();
         FormBody.Builder formBuilder = new FormBody.Builder();
-        formBuilder.add("username", TABLENAME);
-        Request request = new Request.Builder().url(getDataUri).post(formBuilder.build()).build();
+        formBuilder.add("username", USERNAME);
+        Request request = new Request.Builder().url(getBillsNameUri).post(formBuilder.build()).build();
         Call call = client.newCall(request);
         call.enqueue(new Callback()
         {
+
             @Override
             public void onFailure(Call call, IOException e)
             {
@@ -269,12 +419,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     @Override
                     public void run()
                     {
-                        pDialog.dismiss();
-                        SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.WARNING_TYPE);
-                        dialog.setTitleText("服务器未连接！！");
-                        dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
-                        dialog.setCancelable(true);
-                        dialog.show();
+                        runOnUiThread(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                pDialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
+                                pDialog.setTitleText("服务器未连接");
+                                pDialog.show();
+                            }
+                        });
                     }
                 });
             }
@@ -282,69 +436,150 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onResponse(Call call, Response response) throws IOException
             {
-                String data = response.body().string();
-                if(data.equals(""))
+                String jsonString = response.body().string();
+                Log.d("haha", "收到了JSON数据" + jsonString);
+                if(jsonString.equals("新用户"))
                 {
                     runOnUiThread(new Runnable()
                     {
                         @Override
                         public void run()
                         {
-                            pDialog.dismiss();
-                            SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.NORMAL_TYPE);
-                            dialog.setTitleText("服务器上没有数据");
-                            dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
-                            dialog.setCancelable(true);
-                            dialog.show();
+                            pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);                            pDialog.setTitleText("欢迎你新用户");
+                            pDialog.setTitleText("欢迎你新用户");
+                            pDialog.show();
                         }
                     });
                     return;
                 }
-                Log.d("haha", data);
                 try
                 {
-                    JSONObject object = new JSONObject(data);
-                    Log.d("haha", "从服务器获取到了" + object.length() + "条数据");
-                    for(int i=1;i<=object.length();i++)
+                    JSONObject object = new JSONObject(jsonString);
+                    JSONArray jsonArray= object.getJSONArray("billsname");
+                    List<String> billsName = new ArrayList<>();
+                    for(int i=0;i<jsonArray.length();i++)
                     {
-                        JSONObject itemObject = object.getJSONObject(String.valueOf(i));
-                        String name = (String) itemObject.get("name");
-                        int money = Integer.parseInt((String) itemObject.get("money"));
-                        String describe=(String) itemObject.get("describe");
-                        String date=(String) itemObject.get("date");
-                        String oldpic=(String) itemObject.get("oldpic");
-                        String pic=(String) itemObject.get("pic");
-                        //将图片转换为二进制
-                        ByteString byteString = ByteString.decodeBase64(pic);
-                        byte[] picInfo = byteString.toByteArray();
-                        ByteString byteString2 = ByteString.decodeBase64(oldpic);
-                        byte[] oldpicInfo = byteString2.toByteArray();
-                        BillBean newBean = new BillBean(date, picInfo, oldpicInfo, describe, name, money,"kong");
-                        saveBeanToDataBase(newBean);
-                        Log.d("haha", "从JSON中获得的数据是" + name + "的" + ",money is " + money + " describe is " + describe + " date is " + date);
+                        billsName.add((String) jsonArray.get(i));
                     }
-                } catch (Exception e)
+                    HashMap<String, String> touristsMap = new HashMap<>();
+                    for (String billName : billsName)
+                    {
+                        String tourists = object.getString(billName);
+                        touristsMap.put(billName, tourists);
+                        Log.d("haha", billName + "的出游人有" + tourists);
+                        saveBillNameToDB(billName);
+                        SaveNameToSharedPreference(AverageBillActivity.this, tourists, SharedPreferenceName, billName);
+                    }
+                    getEachBillBeanFromServer(billsName, touristsMap, pDialog);
+                } catch (JSONException e)
                 {
                     e.printStackTrace();
-                    Log.d("haha", "解析JSON时出现错误");
                 }
-                runOnUiThread(new Runnable()
-                {
-                    @Override
-                    public void run()
-                    {
-                        showRecyclerView();
-                        Log.d("haha", "改变对话框文字");
-                        pDialog.dismiss();
-                        SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.SUCCESS_TYPE);
-                        dialog.setTitleText("从服务器获取数据成功");
-                        dialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
-                        dialog.setCancelable(true);
-                        dialog.show();
-                    }
-                });
             }
         });
+    }
+
+    /**
+     * 获取到了所有帐单名，此方法将每个账单每条信息从服务器中取出来
+     * @param billsName
+     * @param touristsMap
+     * @param pDialog
+     */
+    private void getEachBillBeanFromServer(final List<String> billsName, HashMap<String, String> touristsMap, final SweetAlertDialog pDialog)
+    {
+        final int[] count = {0};
+        for (final String billName : billsName)
+        {
+            OkHttpClient client = new OkHttpClient();
+            FormBody.Builder formBuilder = new FormBody.Builder();
+            formBuilder.add("username", USERNAME);
+            formBuilder.add("billname", billName);
+            Request request = new Request.Builder().url(getDataUri).post(formBuilder.build()).build();
+            Call call = client.newCall(request);
+            call.enqueue(new Callback()
+            {
+                @Override
+                public void onFailure(Call call, IOException e)
+                {
+                    count[0]++;
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            pDialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
+                            pDialog.setTitleText("服务器未连接");
+                            pDialog.show();
+
+                        }
+                    });
+                    Log.d("haha", "接受billBean出错");
+
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
+                {
+                    String JSONString = response.body().string();
+                    if (JSONString.equals("没有数据"))
+                    {
+                        runOnUiThread(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                                pDialog.setTitleText("云端没有数据");
+                                pDialog.show();
+                            }
+                        });
+                        return;
+                    }
+                    try
+                    {
+                        JSONObject object = new JSONObject(JSONString);
+                        for(int i=1;i<=object.length();i++)
+                        {
+                            JSONObject beanObject = object.getJSONObject(String.valueOf(i));
+                            Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
+                            BillBean bean = new BillBean();
+                            bean.setName(beanObject.getString("name"));
+                            bean.setDateInfo(beanObject.getString("date"));
+                            bean.setMoney(beanObject.getInt("money"));
+                            bean.setDescripInfo(beanObject.getString("describe"));
+                            bean.setPicInfo(ByteString.decodeBase64(beanObject.getString("pic")).toByteArray());
+                            bean.setOldpicInfo(ByteString.decodeBase64(beanObject.getString("oldpic")).toByteArray());
+                            saveBeanToDataBase(billName, bean);
+
+                        }
+                        count[0]++;
+                        if (count[0] == billsName.size())
+                        {
+                            runOnUiThread(new Runnable()
+                            {
+                                @Override
+                                public void run()
+                                {
+                                    pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                                    pDialog.setTitleText("获取数据成功");
+                                    pDialog.show();
+                                    saveRealBillNameToSharedPreferences(AverageBillActivity.this,billsName.get(0));
+                                    showRecyclerView();
+                                }
+                            });
+                        }else
+                        {
+                            Log.d("haha", "count 为" + count[0]);
+                        }
+                    } catch (JSONException e)
+                    {
+                        e.printStackTrace();
+                    }
+
+                }
+            });
+        }
+
     }
 
     /**
@@ -375,23 +610,25 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 showMateriaDialog();
                 break;
             case R.id.returnLog:
-                final MaterialDialog confirmReturnDialog = new MaterialDialog(this);
-                confirmReturnDialog.setTitle("你确认要退出吗");
-                confirmReturnDialog.setCanceledOnTouchOutside(false);
-                confirmReturnDialog.setPositiveButton("确定", new View.OnClickListener()
+                final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this,SweetAlertDialog.WARNING_TYPE);
+                confirmReturnDialog.setTitleText("你确认要退出吗");
+                confirmReturnDialog.setConfirmText("确定");
+                confirmReturnDialog.setCancelText("再留一会儿");
+                confirmReturnDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
                 {
                     @Override
-                    public void onClick(View v)
+                    public void onClick(SweetAlertDialog sweetAlertDialog)
                     {
+                        saveRealBillNameToSharedPreferences(AverageBillActivity.this, "");
                         Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
                         startActivity(intent);
                         AverageBillActivity.this.finish();
                     }
                 });
-                confirmReturnDialog.setNegativeButton("取消", new View.OnClickListener()
+                confirmReturnDialog.setCancelClickListener(new SweetAlertDialog.OnSweetClickListener()
                 {
                     @Override
-                    public void onClick(View v)
+                    public void onClick(SweetAlertDialog sweetAlertDialog)
                     {
                         confirmReturnDialog.dismiss();
                     }
@@ -399,7 +636,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 confirmReturnDialog.show();
                 break;
             case R.id.floatbutton://此按钮即是添加账单按钮
-                if(!(SharedPreferenceHelper.IsNameNULL(this,SharedPreferenceName)))
+                if(!getRealBillNameFromSharedPreferences(this).equals(""))
                 {
                     addBill();
                 }else
@@ -419,31 +656,41 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             case R.id.settlemoney:
                 Intent intent = new Intent(this, SettleMoneyActivity.class);
                 intent.putExtra("transition", "fade");
+                intent.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
                 {
                     startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this).toBundle());
-                    new Thread(new Runnable()//在后台线程中关闭此活动
-                    {
-                        @Override
-                        public void run()
-                        {
-                            try
-                            {
-                                Thread.sleep(1000);
-                                AverageBillActivity.this.finish();
-                            } catch (InterruptedException e)
-                            {
-                                e.printStackTrace();
-                            }
-                        }
-                    }).start();
+                    finishThisActivity(this);
                 }else
                 {
                     startActivity(intent);
-
                 }
-
+                mMenu.toggleMenu();
+                break;
+            case R.id.finish_bill:
+                finishBill();
+                mMenu.toggleMenu();
+                break;
+            case R.id.view_all_bills:
+                intentToBillListActivity();
+                mMenu.toggleMenu();
+                break;
         }
+    }
+
+
+    private void intentToBillListActivity()
+    {
+        Intent intent = new Intent(AverageBillActivity.this, BillListActivity.class);
+        startActivity(intent);
+    }
+
+    /**
+     * 完成一个账单
+     */
+    private void finishBill()
+    {
+
     }
 
     private void addBill()
@@ -476,7 +723,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         moneyEditText = (EditText) view.findViewById(R.id.money_num_edit);
         descripeEditText = (EditText) view.findViewById(R.id.des_bill_edit);
 
-        final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName);
+        final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName,getRealBillNameFromSharedPreferences(this));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(AverageBillActivity.this,android.R.layout.simple_spinner_item,nameList);
         spinner.setAdapter(adapter);
 
@@ -642,11 +889,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             /**
                              * 数据获取完毕，增加卡片
                              */
-                            addNewCard();
+                            addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
                     }
                 break;
             case CHOOSE_PHOTO:
-
                 imgUri = data.getData();
                 Intent intent = new Intent("com.android.camera.action.CROP");
                 intent.setDataAndType(imgUri, "image/*");
@@ -665,14 +911,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     bitmap= tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f,  816.0f);
                     bean.setPicInfo(BitmapHandler.convertBitmapToByte(bitmap));
                 }
-                addNewCard();
+                addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
                 break;
         }
     }
 
-    private void addNewCard()
+    private void addNewCard(String billName)
     {
-        saveBeanToDataBase();
+        saveBeanToDataBase(billName);
         Log.d("haha", "在addcard方法中"+bean.toString());
         showRecyclerView();
     }
@@ -685,9 +931,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      "pic text not null," +
      "date text not null)"
      */
-    private void saveBeanToDataBase()
+    private void saveBeanToDataBase(String billName)
     {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,billName);
+        SQLiteDatabase db=dbHelper.getWritableDatabase();
+        dbHelper.createTable(db);
         ContentValues values = new ContentValues();
         values.put("name",bean.getName());
         values.put("money",bean.getMoney());
@@ -696,29 +944,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("oldpic", bean.getOldpicInfo());
         values.put("date",bean.getDateInfo());
         values.put("picadress", bean.getPicadress());
-        Log.d("haha", "成功存入" + bean.toString());
-        db.insert(TABLENAME, null, values);
-        values.clear();
-        db.close();
-
-    }
-    private void saveBeanToDataBase(BillBean bean)
-    {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("name",bean.getName());
-        values.put("money",bean.getMoney());
-        values.put("descripe",bean.getDescripInfo());
-        values.put("pic", bean.getPicInfo());
-        values.put("oldpic", bean.getOldpicInfo());
-        values.put("date",bean.getDateInfo());
-        values.put("picadress", bean.getPicadress());
-        db.insert(TABLENAME, null, values);
+        db.insert(billName, null, values);
         Log.d("haha", "成功存入" + bean.toString());
         values.clear();
         db.close();
 
     }
+
 
     private void showMateriaDialog()
     {
@@ -739,84 +971,122 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onClick(final View v)
             {
-                AnimationSet animationSet = new AnimationSet(AverageBillActivity.this, null);
-                animationSet.addAnimation(new AlphaAnimation(1f,0f));
-                animationSet.setDuration(getResources().getInteger(android.R.integer.config_shortAnimTime));
-                animationSet.setAnimationListener(new Animation.AnimationListener()
+                /*
+                //提取输入框中人名,并存入数据库
+               */
+                if("".equals(editText.getText().toString().trim()))
                 {
-                    @Override
-                    public void onAnimationStart(Animation animation)
-                    {
+                    ItemAnimition.confirmAndBigger(numOfManButton);
+                    Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
+                }else
+                {
+                    final String nameString = editText.getText().toString();
 
-                    }
 
-                    @Override
-                    public void onAnimationEnd(Animation animation)
+
+
+
+                    materialDialog.setTitle("旅行日志名字？");
+                    editText.setText("");
+                    editText.setHint("");
+                    numOfManButton.setOnClickListener(new View.OnClickListener()
                     {
-                        if("".equals(editText.getText().toString().trim()))
+                        @Override
+                        public void onClick(final View v)
                         {
-                            ItemAnimition.confirmAndBigger(numOfManButton);
-                            Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
-                        }else
-                        {
-                            SaveNameToSharedPreference(v);
-                            materialDialog.dismiss();
-                            Snackbar.make(addBillButton, "保存成功", Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
+                            AnimationSet animationSet = new AnimationSet(AverageBillActivity.this, null);
+                            animationSet.addAnimation(new AlphaAnimation(1f,0f));
+                            animationSet.setDuration(getResources().getInteger(android.R.integer.config_shortAnimTime));
+                            animationSet.setAnimationListener(new Animation.AnimationListener()
                             {
                                 @Override
-                                public void onClick(View v)
+                                public void onAnimationStart(Animation animation)
                                 {
-                                    SharedPreferenceHelper.deleteAllName(AverageBillActivity.this, SharedPreferenceName);
+
                                 }
-                            }).show();
+
+                                @Override
+                                public void onAnimationEnd(Animation animation)
+                                {
+                                    if("".equals(editText.getText().toString().trim()))
+                                    {
+                                        ItemAnimition.confirmAndBigger(numOfManButton);
+                                        Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
+                                    }else
+                                    {
+                                        String billName = editText.getText().toString();
+                                        saveRealBillNameToSharedPreferences(AverageBillActivity.this,billName);
+                                        saveBillNameToDB(billName);
+                                        SharedPreferenceHelper.SaveNameToSharedPreference(AverageBillActivity.this
+                                                ,nameString,SharedPreferenceName,billName);
+                                        materialDialog.dismiss();
+                                        titleText.setText(billName);
+                                        Snackbar.make(addBillButton, "保存成功"+billName, Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
+                                        {
+                                            @Override
+                                            public void onClick(View v)
+                                            {
+                                                SharedPreferenceHelper.deleteAllName(AverageBillActivity.this, SharedPreferenceName);
+                                            }
+                                        }).show();
+                                    }
+                                }
+
+                                @Override
+                                public void onAnimationRepeat(Animation animation)
+                                {
+
+                                }
+                            });
+                            v.startAnimation(animationSet);
                         }
-                    }
+                    });
 
-                    @Override
-                    public void onAnimationRepeat(Animation animation)
-                    {
+                }
 
-                    }
-                });
-                //提取输入框中人名,并存入数据库
-                v.startAnimation(animationSet);
             }
         });
 
     }
 
-
-    private void deleteAllData()
+    private void saveBeanToDataBase(String BillName,BillBean bean)
     {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete(TABLENAME, null, null);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,BillName);
+        SQLiteDatabase db=dbHelper.getWritableDatabase();
+        dbHelper.createTable(db);
+        ContentValues values = new ContentValues();
+        values.put("name",bean.getName());
+        values.put("money",bean.getMoney());
+        values.put("descripe",bean.getDescripInfo());
+        values.put("pic", bean.getPicInfo());
+        values.put("oldpic", bean.getOldpicInfo());
+        values.put("date",bean.getDateInfo());
+        values.put("picadress", bean.getPicadress());
+        db.insert(BillName, null, values);
+        Log.d("haha", "成功存入" + bean.toString());
+        values.clear();
+        db.close();
+
+    }
+
+    private void saveBillNameToDB(String name)
+    {
+        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        Cursor cursor = db.query(USERNAME + "TableList", null, "tableName = ?", new String[]{name}, null, null, null);
+        if(cursor.getCount()==0)
+        {
+            ContentValues values = new ContentValues();
+            values.put("tableName", name);
+            db.insert(USERNAME + "TableList", null, values);
+            Log.d("haha", "成功将表名" + name + "存入数据库");
+            values.clear();
+        }else
+        {
+            Log.d("haha", name + "重复了");
+        }
+        cursor.close();
         db.close();
     }
-
-
-    public void SaveNameToSharedPreference(View v)
-    {
-        String nameString = editText.getText().toString();
-        if(nameString.contains("，"))
-        {
-            nameString =nameString.replace("，", ",");
-            Log.d("haha", "名字字符串中有中文逗号，已修改为英文逗号");
-        }
-        String[] nameList = nameString.split(",");//将输入的人名保存进字符串数组
-        saveToSharedPreferences(nameList);//将名字存入本地
-    }
-
-    private void saveToSharedPreferences(String[] nameList)
-    {
-        SharedPreferences preference = getSharedPreferences(SharedPreferenceName, MODE_PRIVATE);
-        SharedPreferences.Editor editor = preference.edit();
-        for (int i = 0; i < nameList.length; i++)
-        {
-            editor.putString(nameList[i], nameList[i]);
-        }
-        editor.commit();
-    }
-
 
 
 
@@ -828,51 +1098,57 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      "date text not null)"
      * @return
      */
-    public List<BillBean> getBeanFromDataBase()
+    public List<BillBean> getBeanFromDataBase(String BillName)
     {
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,BillName);
         List<BillBean> beanList = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(TABLENAME, null, null, null, null, null, null);
-        if(cursor!=null)
-        {
-            String[] columns = cursor.getColumnNames();
-            while (cursor.moveToNext())
+        try{
+            SQLiteDatabase db=dbHelper.getWritableDatabase();
+            Cursor cursor = db.query(BillName, null, null, null, null, null, null);
+            if(cursor!=null)
             {
-                BillBean bean = new BillBean();
-                for (String name : columns)
+                String[] columns = cursor.getColumnNames();
+                while (cursor.moveToNext())
                 {
-                    switch(name)
+                    BillBean bean = new BillBean();
+                    for (String name : columns)
                     {
-                        case "name":
-                            bean.setName(cursor.getString(cursor.getColumnIndex(name)));
-                            break;
-                        case "money":
-                            bean.setMoney(cursor.getInt(cursor.getColumnIndex(name)));
-                            break;
-                        case "descripe":
-                            bean.setDescripInfo(cursor.getString(cursor.getColumnIndex(name)));
-                            break;
-                        case "pic" :
-                              bean.setPicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
-                            break;
-                        case "date":
-                            bean.setDateInfo(cursor.getString(cursor.getColumnIndex(name)));
-                            break;
-                        case "oldpic":
-                            bean.setOldpicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
-                            break;
-                        case "picadress":
-                            bean.setPicadress(cursor.getString(cursor.getColumnIndex(name)));
-                            break;
+                        switch (name)
+                        {
+                            case "name":
+                                bean.setName(cursor.getString(cursor.getColumnIndex(name)));
+                                break;
+                            case "money":
+                                bean.setMoney(cursor.getInt(cursor.getColumnIndex(name)));
+                                break;
+                            case "descripe":
+                                bean.setDescripInfo(cursor.getString(cursor.getColumnIndex(name)));
+                                break;
+                            case "pic":
+                                bean.setPicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
+                                break;
+                            case "date":
+                                bean.setDateInfo(cursor.getString(cursor.getColumnIndex(name)));
+                                break;
+                            case "oldpic":
+                                bean.setOldpicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
+                                break;
+                            case "picadress":
+                                bean.setPicadress(cursor.getString(cursor.getColumnIndex(name)));
+                                break;
+                        }
                     }
+                    Log.d("haha", "从数据库获得了"+bean.toString());
+                    beanList.add(bean);
                 }
-                Log.d("haha", "从数据库获得了"+bean.toString());
-                beanList.add(bean);
+                cursor.close();
+            }else
+            {
+                Toast.makeText(this, "database is null", Toast.LENGTH_SHORT).show();
             }
-            cursor.close();
-        }else
+        }catch (Exception e)
         {
-            Toast.makeText(this, "database is null", Toast.LENGTH_SHORT).show();
+            return beanList;
         }
         return beanList;
     }

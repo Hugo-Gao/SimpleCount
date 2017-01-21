@@ -22,67 +22,71 @@
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:orientation="vertical">
-    <android.support.v7.widget.CardView
-        android:layout_width="300dp"
-        android:layout_height="220dp"
-        app:cardCornerRadius="10dp"
-        android:layout_marginTop="60dp"
-        android:id="@+id/logSignCard"
-        app:cardBackgroundColor="#E5DCC5"
-        >
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:hint="账号"
-            >
 
-        <android.support.design.widget.TextInputEditText
-            android:layout_width="270dp"
-            android:layout_height="40dp"
-            android:layout_marginTop="30dp"
-            android:id="@+id/username_Password"
-            android:layout_gravity="center_horizontal"/>
-
-        </android.support.design.widget.TextInputLayout>
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+        <android.support.v7.widget.CardView
+            android:layout_width="300dp"
+            android:layout_height="240dp"
+            app:cardCornerRadius="10dp"
             android:layout_marginTop="60dp"
-            android:hint="密码"
+            android:id="@+id/logSignCard"
+            app:cardBackgroundColor="#E5DCC5"
             >
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="账号"
+                >
 
             <android.support.design.widget.TextInputEditText
                 android:layout_width="270dp"
                 android:layout_height="40dp"
-                android:layout_marginTop="25dp"
-                android:id="@+id/password_EditText"
-                android:inputType="textPassword"
+                android:layout_marginTop="30dp"
+                android:id="@+id/username_Password"
                 android:layout_gravity="center_horizontal"/>
 
-        </android.support.design.widget.TextInputLayout>
+            </android.support.design.widget.TextInputLayout>
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="60dp"
+                android:hint="密码"
+                >
 
+                <android.support.design.widget.TextInputEditText
+                    android:layout_width="270dp"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="25dp"
+                    android:id="@+id/password_EditText"
+                    android:inputType="textPassword"
+                    android:layout_gravity="center_horizontal"/>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="登录"
-            android:layout_marginLeft="30dp"
-            android:id="@+id/log_Button"
-            android:background="@drawable/material_button"
-            android:layout_marginTop="130dp"/>
+            </android.support.design.widget.TextInputLayout>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginTop="130dp"
-            android:text="注册"
-            android:layout_gravity="right"
-            android:layout_marginRight="30dp"
-            android:background="@drawable/material_button"
-            android:id="@+id/Sign_Button"/>
-    </android.support.v7.widget.CardView>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
 
+            <Button
+                android:layout_width="260dp"
+                android:layout_height="40dp"
+                android:text="登录"
+                android:id="@+id/log_Button"
+                android:background="#1eb200"
+                android:layout_marginTop="130dp"
+                android:layout_gravity="center_horizontal"/>
+
+            <Button
+                android:layout_width="260dp"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:text="注册"
+                android:layout_gravity="center_horizontal"
+                android:background="#ff0000"
+                android:id="@+id/Sign_Button"/>
+            </LinearLayout>
+        </android.support.v7.widget.CardView>
 
 
     </LinearLayout>

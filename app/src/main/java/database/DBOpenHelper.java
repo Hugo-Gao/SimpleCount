@@ -19,6 +19,10 @@ public class DBOpenHelper extends SQLiteOpenHelper
         TABLENAME = TableName;
     }
 
+    /**
+     * 以userName+BillName作为表名
+     * @param db
+     */
     @Override
     public void onCreate(SQLiteDatabase db)
     {
@@ -31,7 +35,7 @@ public class DBOpenHelper extends SQLiteOpenHelper
                 "pic BLOB not null," +
                 "date text not null," +
                 "oldpic BLOB not null," +
-                "picadress text not null)");
+                "picadress text)");
         Log.d("haha", "创建了表" + TABLENAME);
 
     }
@@ -47,6 +51,14 @@ public class DBOpenHelper extends SQLiteOpenHelper
                 "oldpic BLOB not null," +
                 "picadress text)");
         Log.d("haha", "创建了表" + TABLENAME);
+    }
+
+    public void createTableList(SQLiteDatabase db)
+    {
+        String TableListName = "TableList";
+        db.execSQL("create table if not exists "+TableListName+"(_id integer primary key autoincrement," +
+                "tableName text)");
+        Log.d("haha", "创建了表" + TableListName);
     }
 
 

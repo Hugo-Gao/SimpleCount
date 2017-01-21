@@ -8,114 +8,82 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.program.gyf.simplecount.BillBean;
+import com.program.gyf.simplecount.BillItem;
 import com.program.gyf.simplecount.R;
 
 import java.util.List;
 
 /**
- * Created by Administrator on 2016/9/28.
+ * Created by Administrator on 2017/1/18.
  */
 
-public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.MyHolder> implements View.OnClickListener
+public class BillViewAdapter extends RecyclerView.Adapter<BillViewAdapter.ViewHolder> implements View.OnClickListener
 {
-    private List<BillBean> beanList;
+    private List<BillItem> itemList;
     private Context context;
-    private LayoutInflater mInflater;
-    private onRecyclerViewItemClickListen mOnItemClickListen=null;
-
-
-
-    public BillViewAdapter(List<BillBean> beenList, Context context)
+    private LayoutInflater inflater;
+    private onRecyclerViewItemClickListen listener;
+    public BillViewAdapter(Context context, List<BillItem> itemList)
     {
-        this.beanList = beenList;
         this.context = context;
-        this.mInflater = LayoutInflater.from(context);
+        this.itemList = itemList;
+        this.inflater = LayoutInflater.from(context);
     }
 
-
-
-    /**
-     * 找View
-     * @param parent
-     * @param viewType
-     * @return
-     */
     @Override
-    public MyHolder onCreateViewHolder(ViewGroup parent, int viewType)
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType)
     {
-        View view = mInflater.inflate(R.layout.card_layout, parent,false);
-        //返回到Holder
+        View view = inflater.inflate(R.layout.each_bill_layout, parent, false);
         view.setOnClickListener(this);
-        return new MyHolder(view);
+        return new ViewHolder(view);
     }
 
-    /**
-     * 显示控件内容
-     * @param holder
-     * @param position
-     */
     @Override
-    public void onBindViewHolder(MyHolder holder, int position)
+    public void onBindViewHolder(ViewHolder holder, int position)
     {
-        BillBean bean = beanList.get(position);
-        holder.picInfo.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
-        holder.dateInfo.setText(bean.getDateInfo());
-        holder.itemView.setTag(bean);
-        holder.itemView.setTag(R.id.pic_address,holder.picInfo);
+        holder.billName.setText(itemList.get(position).getBillName());
+        holder.billPic.setImageBitmap(
+                BitmapHandler.convertByteToBitmap(itemList.get(position)
+                        .getBillPic()));
+        holder.itemView.setTag(itemList.get(position).getBillName());
+
     }
 
     @Override
     public int getItemCount()
     {
-        return beanList.size();
-    }
-    public void addItem(int position, BillBean bean)
-    {
-        beanList.add(position, bean);
-        notifyItemInserted(position);
-
-    }
-    public void deleteItem(int position)
-    {
-        beanList.remove(position);
-        notifyItemRemoved(position);
+        return itemList.size();
     }
 
     @Override
     public void onClick(View v)
     {
-        if(mOnItemClickListen!=null)
+        if(listener!=null)
         {
-            mOnItemClickListen.onItemClick(v,(BillBean) v.getTag(), (ImageView) v.getTag(R.id.pic_address));
+            listener.onitemView(v, (String) v.getTag());
         }
     }
 
-    /**
-     * 给控件绑定布局
-     */
-    public class MyHolder extends RecyclerView.ViewHolder
+    public class ViewHolder extends RecyclerView.ViewHolder
     {
 
-        private TextView dateInfo;
-        private ImageView picInfo;
-        public MyHolder(View itemView)
+        private ImageView billPic;
+        private TextView billName;
+        public ViewHolder(View itemView)
         {
             super(itemView);
-            dateInfo = (TextView) itemView.findViewById(R.id.date_bill);
-            picInfo = (ImageView) itemView.findViewById(R.id.pic_address);
+            billPic = (ImageView) itemView.findViewById(R.id.bill_pic);
+            billName = (TextView) itemView.findViewById(R.id.bill_name);
         }
     }
-
-
-    public static interface onRecyclerViewItemClickListen
+    public interface onRecyclerViewItemClickListen
     {
-        void onItemClick(View view, BillBean bean,ImageView imageView);
+        void onitemView(View view,String billName);
     }
+
     public void setOnItemClickListener(onRecyclerViewItemClickListen listener)
     {
-        mOnItemClickListen = listener;
+        this.listener = listener;
     }
 
 }
-

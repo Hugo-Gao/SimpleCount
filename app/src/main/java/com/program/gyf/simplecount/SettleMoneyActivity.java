@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -15,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,8 +25,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
-import tool.SharedPreferenceHelper;
+import tool.AcivityHelper;
+
+import static tool.SharedPreferenceHelper.getNameFromSharedPreferences;
+import static tool.SharedPreferenceHelper.getTableNameBySP;
+import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
 
 /**
  * Created by Administrator on 2016/10/21.
@@ -40,12 +47,16 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
     private String SPName ;
     private Map<String, Integer> personBillMap;
     private FloatingActionButton FAB;
+    private String BillName;
+    private Button finishBtn;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         getWindow().requestFeature(Window.FEATURE_CONTENT_TRANSITIONS);
         String transition = getIntent().getStringExtra("transition");
+        BillName = getIntent().getStringExtra("BillName");
+
         switch (transition)
         {
             case "fade":
@@ -55,12 +66,14 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
                 break;
         }
         setContentView(R.layout.settlemoney_layout);
+        finishBtn = (Button) findViewById(R.id.finish_btn);
+        finishBtn.setOnClickListener(this);
         FAB = (FloatingActionButton) findViewById(R.id.floatingActionButton);
         FAB.setOnClickListener(this);
             personBillMap = new HashMap<>();
-        TABLENAME = SharedPreferenceHelper.getTableNameBySP(SettleMoneyActivity.this);
+        TABLENAME = getTableNameBySP(SettleMoneyActivity.this);
         SPName = TABLENAME;
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
+        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1,TABLENAME);
         moneynumText = (TextView) findViewById(R.id.bill_sum);
         showInformation();
         Log.d("haha", "person num is " + personBillMap.size());
@@ -89,11 +102,11 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         List<String> nameLsit;
         int money=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        nameLsit = SharedPreferenceHelper.getNameFromSharedPreferences(SettleMoneyActivity.this, SPName);
+        nameLsit = getNameFromSharedPreferences(SettleMoneyActivity.this, SPName,BillName);
         moneyAver = moneySum / nameLsit.size();
         for (String name: nameLsit)
         {
-            Cursor cursor=db.query(TABLENAME,null,"name = ?",new String[]{name},null, null, null);
+            Cursor cursor=db.query(BillName,null,"name = ?",new String[]{name},null, null, null);
             while (cursor.moveToNext())
             {
                 money+=cursor.getInt(cursor.getColumnIndex("money"));
@@ -139,10 +152,10 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
          moneySum=0;
         int billcount=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(TABLENAME, null, null, null, null, null, null);
+        Cursor cursor = db.query(BillName, null, null, null, null, null, null);
         billcount=cursor.getCount();
         cursor.close();
-        cursor = db.query(TABLENAME,null, null, null, null, null, null);
+        cursor = db.query(BillName,null, null, null, null, null, null);
         if(cursor!=null)
         {
             while(cursor.moveToNext())
@@ -205,7 +218,30 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
                 animator.start();
 
                 break;
+            case R.id.finish_btn:
+                SweetAlertDialog pDialog = new SweetAlertDialog(SettleMoneyActivity.this, SweetAlertDialog.NORMAL_TYPE);
+                pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
+                pDialog.setTitleText("你确定要结算了吗");
+                pDialog.setCancelable(true);
+                pDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+                {
+                    @Override
+                    public void onClick(SweetAlertDialog sweetAlertDialog)
+                    {
+                        finishBill();
+                    }
+                });
+                pDialog.show();
+                break;
         }
+    }
+
+    private void finishBill()
+    {
+        saveRealBillNameToSharedPreferences(this,"");
+        Intent intent = new Intent(this, AverageBillActivity.class);
+        startActivity(intent);
+        AcivityHelper.finishThisActivity(this);
     }
 
     @Override

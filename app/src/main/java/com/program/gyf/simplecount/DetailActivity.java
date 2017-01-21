@@ -8,10 +8,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import database.DBOpenHelper;
 import tool.BitmapHandler;
@@ -30,6 +26,7 @@ public class DetailActivity extends Activity
     private TextView dateText;
     private DBOpenHelper dbHelper;
     public String TABLENAME;
+    private String BillName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -42,14 +39,15 @@ public class DetailActivity extends Activity
         moneyText = (TextView) findViewById(R.id.money_each_bill);
         dateText = (TextView) findViewById(R.id.date_bill);
         TABLENAME = SharedPreferenceHelper.getTableNameBySP(DetailActivity.this);
-        dbHelper = new DBOpenHelper(this, "friends.db", null, 1,TABLENAME);
         Intent intent = getIntent();
+        BillName = intent.getStringExtra("BillName");
+        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1, BillName);
         String beanInfo = intent.getStringExtra("TheBeanInfo");
-        BillBean bean=SearchBeanByDateInfo(beanInfo);
+        BillBean bean = SearchBeanByDateInfo(beanInfo);
         if (bean.getOldpicInfo() != null)
         {
             oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getOldpicInfo()));
-        }else
+        } else
         {
             oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
         }
@@ -61,35 +59,35 @@ public class DetailActivity extends Activity
     }
 
     /**
-     *  // 第一个参数String：表名
-     // 第二个参数String[]:要查询的列名
-     // 第三个参数String：查询条件
-     // 第四个参数String[]：查询条件的参数
-     // 第五个参数String:对查询的结果进行分组
-     // 第六个参数String：对分组的结果进行限制
-     // 第七个参数String：对查询的结果进行排序
-     "create table if not exists BillDB(_id integer primary key autoincrement," +
-     "name text not null," +
-     "money integer not null," +
-     "descripe text not null," +
-     "pic BLOB not null," +
-     "date text not null," +
-     "oldpic BLOB not null)"
+     * // 第一个参数String：表名
+     * // 第二个参数String[]:要查询的列名
+     * // 第三个参数String：查询条件
+     * // 第四个参数String[]：查询条件的参数
+     * // 第五个参数String:对查询的结果进行分组
+     * // 第六个参数String：对分组的结果进行限制
+     * // 第七个参数String：对查询的结果进行排序
+     * "create table if not exists BillDB(_id integer primary key autoincrement," +
+     * "name text not null," +
+     * "money integer not null," +
+     * "descripe text not null," +
+     * "pic BLOB not null," +
+     * "date text not null," +
+     * "oldpic BLOB not null)"
      */
     private BillBean SearchBeanByDateInfo(String beanInfo)
     {
         BillBean bean = new BillBean();
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(TABLENAME, null, "date=?", new String[]{beanInfo}, null, null,
+        Cursor cursor = db.query(BillName, null, "date=?", new String[]{beanInfo}, null, null,
                 null);
-        if(cursor!=null)
+        if (cursor != null)
         {
             String[] columns = cursor.getColumnNames();
             while (cursor.moveToNext())
             {
                 for (String name : columns)
                 {
-                    switch(name)
+                    switch (name)
                     {
                         case "name":
                             bean.setName(cursor.getString(cursor.getColumnIndex(name)));
@@ -100,7 +98,7 @@ public class DetailActivity extends Activity
                         case "descripe":
                             bean.setDescripInfo(cursor.getString(cursor.getColumnIndex(name)));
                             break;
-                        case "pic" :
+                        case "pic":
                             bean.setPicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
                             break;
                         case "date":
@@ -114,10 +112,10 @@ public class DetailActivity extends Activity
                             break;
                     }
                 }
-                Log.d("haha", "在Detail中获得了"+bean.toString());
+                Log.d("haha", "在Detail中获得了" + bean.toString());
             }
             cursor.close();
-        }else
+        } else
         {
             Log.d("haha", "cursor is null");
             bean = null;
@@ -126,6 +124,8 @@ public class DetailActivity extends Activity
         db.close();
         return bean;
     }
+}
+    /*
     public List<BillBean> getBeanFromDataBase()
     {
         List<BillBean> beanList = new ArrayList<>();
@@ -175,4 +175,4 @@ public class DetailActivity extends Activity
         }
         return beanList;
     }
-}
+}*/
