@@ -75,6 +75,9 @@ import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
 import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
 
+/**
+ * 主界面Activity
+ */
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
     public  String USERNAME;
