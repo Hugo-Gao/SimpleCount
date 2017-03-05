@@ -1,28 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:gravity="center_horizontal"
+              android:orientation="vertical"
     >
 
     <ScrollView
+        android:id="@+id/scrollView1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="500dp"
-        android:id="@+id/origin_image"
-        android:transitionName="PicShare"
-        android:adjustViewBounds="true"
-        android:scaleType="centerCrop"
-        android:src="@mipmap/settlebackground"/>
+
+            <ImageView
+                android:id="@+id/origin_image"
+                android:layout_width="match_parent"
+                android:layout_height="500dp"
+                android:adjustViewBounds="true"
+                android:scaleType="centerCrop"
+                android:src="@mipmap/settlebackground"
+                android:transitionName="PicShare"/>
 
             <TextView
+                android:id="@+id/des_bill"
+                style="@style/MainContentStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
@@ -30,42 +35,42 @@
                 android:paddingLeft="16dp"
                 android:paddingRight="16dp"
                 android:text="描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容描述内容"
-                style="@style/MainContentStyle"
-                android:textSize="20sp"
-                android:id="@+id/des_bill"/>
+                android:textSize="20sp"/>
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="名字"
-                android:textSize="15sp"
-                android:layout_marginTop="15dp"
-                android:paddingLeft="25dp"
-                android:id="@+id/personame_each_bill"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="15dp"
-                android:paddingLeft="30dp"
-                android:id="@+id/money_each_bill"
-                android:text="XXX￥"/>
+                <TextView
+                    android:id="@+id/personame_each_bill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:paddingLeft="25dp"
+                    android:text="名字"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/money_each_bill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:paddingLeft="30dp"
+                    android:text="XXX￥"/>
             </LinearLayout>
 
             <TextView
-                android:text="时间"
+                android:id="@+id/date_bill"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:textSize="15sp"
-                android:fontFamily="sans-serif-condensed"
                 android:layout_marginTop="16dp"
+                android:fontFamily="sans-serif-condensed"
                 android:paddingBottom="60dp"
-                android:id="@+id/date_bill"/>
-              </LinearLayout>
-       </ScrollView>
+                android:text="时间"
+                android:textSize="15sp"/>
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

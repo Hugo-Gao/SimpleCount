@@ -6,7 +6,10 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import database.DBOpenHelper;
@@ -27,6 +30,7 @@ public class DetailActivity extends Activity
     private DBOpenHelper dbHelper;
     public String TABLENAME;
     private String BillName;
+    private ScrollView scrollView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -38,6 +42,37 @@ public class DetailActivity extends Activity
         nameText = (TextView) findViewById(R.id.personame_each_bill);
         moneyText = (TextView) findViewById(R.id.money_each_bill);
         dateText = (TextView) findViewById(R.id.date_bill);
+        scrollView = (ScrollView) findViewById(R.id.scrollView1);
+        final float[] y = {0};
+        scrollView.setOnTouchListener(new View.OnTouchListener()
+        {
+            @Override
+            public boolean onTouch(View v, MotionEvent event)
+            {
+
+                View view = scrollView.getChildAt(0);
+                int maxheight = view.getMeasuredHeight();
+                if (scrollView.getHeight() + scrollView.getScrollY() >= maxheight)//判断是否到达底部
+                {
+                    switch (event.getAction() & MotionEvent.ACTION_MASK)
+                    {
+                        case MotionEvent.ACTION_DOWN:
+                            y[0] = event.getY();     //得到点击时的Y值
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            if (y[0] - event.getY() >= 300)
+                            {
+                                Log.d("haha", "下滑");
+                                onBackPressed();
+                            }
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            break;
+                    }
+                }
+                return false;
+            }
+        });
         TABLENAME = SharedPreferenceHelper.getTableNameBySP(DetailActivity.this);
         Intent intent = getIntent();
         BillName = intent.getStringExtra("BillName");

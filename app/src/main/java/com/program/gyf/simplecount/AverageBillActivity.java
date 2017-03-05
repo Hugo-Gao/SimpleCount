@@ -63,6 +63,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okio.ByteString;
+import tool.AcivityHelper;
 import tool.BitmapHandler;
 import tool.CardViewAdapter;
 import tool.ItemAnimition;
@@ -80,41 +81,56 @@ import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
  */
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
-    public  String USERNAME;
+    public String USERNAME;
     private SlidingMenu mMenu;
     private FloatingActionButton addBillButton;
     private FloatingActionButton numOfManButton;
     private EditText editText;//这个编辑框是在初始化的对话框的
     private DBOpenHelper dbHelper;
     private TableListDBHelper tableNameDBHelper;
-    private List<BillBean> beanList=new ArrayList<>();
+    private List<BillBean> beanList = new ArrayList<>();
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
     private CardViewAdapter adapter;
     private RecyclerView.LayoutManager layoutManager;
     private EditText moneyEditText;//创建账单中的金额输入框
     private EditText descripeEditText;//创建账单中的描述输入框
-    private static final int TAKE_PHOTO=1;
-    private static final int CHOOSE_PHOTO=2;
+    private static final int TAKE_PHOTO = 1;
+    private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
     private static final int CROP_PHOTO2 = 4;
-    private static  String SharedPreferenceName;
+    private static String SharedPreferenceName;
     private final String PHOTO_PATH = Environment.getExternalStorageDirectory() + "/ASimpleCount/";
     private Uri imageUri;
-    MaterialDialog materialDialog = new MaterialDialog(this);//添加人数的浮动框
+    private tool.WonderfulDialog materialDialog;//添加人数的浮动框
     final BillBean bean = new BillBean();
     private File outputImage;
     private Uri imgUri;
     private int i;
     private Toolbar toolbar;
-    private final String postDataUri="http://172.27.35.1:8070/postdata";
-    private final String getBillsNameUri="http://172.27.35.1:8070/getbillsname";
-    private final String postBillNameListUri = "http://172.27.35.1:8070/postBillList";
-    private final String getDataUri = "http://172.27.35.1:8070/getdata";
+    private final String postDataUri = "http://192.168.253.1:8070/postdata";
+    private final String getBillsNameUri = "http://192.168.253.1:8070/getbillsname";
+    private final String postBillNameListUri = "http://192.168.253.1:8070/postBillList";
+    private final String getDataUri = "http://192.168.253.1:8070/getdata";
     private TextView titleText;
     private Button finish_btn;
     private TextView viewAllBillText;
     private boolean refreshFinish;
+    private boolean isdisappear = true;
+
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        if (isdisappear)
+        {
+            AcivityHelper.finishThisActivity(this);
+        } else
+        {
+            isdisappear = true;
+        }
+    }
+
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
@@ -124,13 +140,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         refreshFinish = false;
         if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
         {
-            Toast.makeText(this, "billName is "+intent.getStringExtra("billName"), Toast.LENGTH_SHORT).show();
-            saveRealBillNameToSharedPreferences(this,intent.getStringExtra("billName"));
-        }else
+            saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
+        } else
         {
             Log.d("haha", "没有传入数据");
         }
-        USERNAME=SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
+        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
         Log.d("haha", "用户名" + USERNAME);
         SharedPreferenceName = USERNAME;
 
@@ -141,9 +156,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         db.close();
         Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
 
-         titleText = (TextView) findViewById(R.id.title);
+        titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
-        if(!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
+        if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         }
@@ -168,15 +183,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onRefresh()
             {
+                swipeRefreshLayout.setRefreshing(true);
                 postToRemoteDB();
             }
         });
         toolbar = (Toolbar) findViewById(R.id.toolbar);
-        if(checkFirstLog())
+        if (checkFirstLog())
         {
             getBeanFromServer();
         }
-        if(SharedPreferenceHelper.getNameFromSharedPreferences(this,SharedPreferenceName,getRealBillNameFromSharedPreferences(this)).size()==0)
+        if (SharedPreferenceHelper.getNameFromSharedPreferences(this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this)).size() == 0)
         {
             showMateriaDialog();
         }
@@ -187,10 +203,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
         Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
-        if (cursor.getCount()==0)
+        if (cursor.getCount() == 0)
         {
             return true;
-        }else
+        } else
         {
             return false;
         }
@@ -203,69 +219,75 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void postToRemoteDB()
     {
-        List<String> billNameList=getBillList();//获取所有账单名称
-        postBillNameListToDB(billNameList,USERNAME);
+        List<String> billNameList = getBillList();//获取所有账单名称
+        postBillNameListToDB(billNameList, USERNAME);
         final int[] count = {0};
-        int sumOfBill=0;
-        for (int index =0;index<billNameList.size();index++)
+        int sumOfBill = getAllBillNum();
+        for (int index = 0; index < billNameList.size(); index++)
         {
-            final int count1 = index+1;
             final String billName = billNameList.get(index);
-            final List<BillBean> beanitemList=getBeanFromDataBase(billName);
+            final List<BillBean> beanitemList = getBeanFromDataBase(billName);
             final int size = beanitemList.size();
-            for(int i=0;i<size;i++)
+            Thread thread=new Thread(new Runnable()
             {
-                sumOfBill = billNameList.size() * size;
-                OkHttpClient client = new OkHttpClient();
-                final int count2=i+1;
-                FormBody.Builder formBuilder=new FormBody.Builder();
-                formBuilder.add("username",USERNAME);//USERNAME就是username
-                formBuilder.add("billname", billName);
-                formBuilder.add("name", beanitemList.get(i).getName());
-                formBuilder.add("money",beanitemList.get(i).getMoneyString());
-                formBuilder.add("describe",beanitemList.get(i).getDescripInfo());
-                formBuilder.add("date",beanitemList.get(i).getDateInfo());
-                formBuilder.add("picinfo", Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT));
-                formBuilder.add("oldpicinfo", Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT));
-                Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
-                Call call = client.newCall(request);
-                call.enqueue(new Callback()
+                @Override
+                public void run()
                 {
-                    @Override
-                    public void onFailure(Call call, final IOException e)
+                    for (int i = 0; i < size; i++)
                     {
-                        runOnUiThread(new Runnable()
+                        OkHttpClient client = new OkHttpClient();
+                        final int count2 = i + 1;
+                        FormBody.Builder formBuilder = new FormBody.Builder();
+                        formBuilder.add("username", USERNAME);//USERNAME就是username
+                        formBuilder.add("billname", billName);
+                        formBuilder.add("name", beanitemList.get(i).getName());
+                        formBuilder.add("money", beanitemList.get(i).getMoneyString());
+                        formBuilder.add("describe", beanitemList.get(i).getDescripInfo());
+                        formBuilder.add("date", beanitemList.get(i).getDateInfo());
+                        formBuilder.add("picinfo", Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT));
+                        formBuilder.add("oldpicinfo", Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT));
+                        Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
+                        Call call = client.newCall(request);
+                        call.enqueue(new Callback()
                         {
                             @Override
-                            public void run()
+                            public void onFailure(Call call, final IOException e)
                             {
-                                if(e.toString()!="java.net.SocketTimeoutException: timeout")
+                                runOnUiThread(new Runnable()
                                 {
-                                    Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
-                                    Log.d("haha", e.toString());
-                                }
+                                    @Override
+                                    public void run()
+                                    {
+                                        if (e.toString() != "java.net.SocketTimeoutException: timeout")
+                                        {
+                                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                                            Log.d("net", e.toString());
+                                        }
+                                        count[0]++;
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onResponse(Call call, Response response) throws IOException
+                            {
                                 count[0]++;
+                                Log.d("net", "同步" + billName + "第" + count2 + "条数据成功");
                             }
                         });
-                    }
 
-                    @Override
-                    public void onResponse(Call call, Response response) throws IOException
-                    {
-                        Log.d("haha", "同步"+billName+"第" + count2 + "条数据成功");
-                        count[0]++;
                     }
-                });
-
-            }
+                }
+            });
+            thread.start();
         }
         final int finalSumOfBill = sumOfBill;
-        final Thread thread=new Thread(new Runnable()
+        final Thread thread = new Thread(new Runnable()
         {
             @Override
             public void run()
             {
-                while(finalSumOfBill != count[0])
+                while (finalSumOfBill != count[0])
                 {
 
                 }
@@ -275,30 +297,26 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     public void run()
                     {
                         swipeRefreshLayout.setRefreshing(false);
-                        Snackbar.make(recyclerView,"同步成功",Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(recyclerView, "同步成功", Snackbar.LENGTH_SHORT).show();
                     }
                 });
 
             }
         });
         thread.start();
-
-
     }
 
 
-    private void postBillNameListToDB(final List<String> billNameList,String UserName)//一次多波向服务器传送数据
+    private void postBillNameListToDB(final List<String> billNameList, String UserName)//一次多波向服务器传送数据
     {
 
-        OkHttpClient client = new OkHttpClient();
-        int i=0;
+        final int[] count = {0};
         for (final String billName : billNameList)
         {
+            OkHttpClient client = new OkHttpClient();
             String touristsString = getNameStringFromSharedPreferences(this, UserName, billName);
-            i++;
-            final int count=i;
             FormBody.Builder formBuilder = new FormBody.Builder();
-            formBuilder.add("billName",billName);
+            formBuilder.add("billName", billName);
             formBuilder.add("userName", UserName);
             formBuilder.add("touristsString", touristsString);
             Request request = new Request.Builder().url(postBillNameListUri).post(formBuilder.build()).build();
@@ -308,19 +326,27 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 @Override
                 public void onFailure(Call call, IOException e)
                 {
-                    Log.d("haha", "传送billNameList和tourists失败");
+                    Log.d("net", "传送billNameList和tourists失败");
                 }
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException
                 {
-                    if (count == billNameList.size())
+                    synchronized (count)
                     {
-                        Log.d("haha", "billNameList和tourists传送完毕");
+                        count[0]++;
+                    }
+                    if (count[0] == billNameList.size())
+                    {
+                        Log.d("net", "billNameList和tourists传送完毕");
+                    } else
+                    {
+                        Log.d("net", "现在count是" + count[0] + " 共有" + billNameList.size());
                     }
                 }
             });
         }
+
     }
 
     private List<String> getBillList()
@@ -344,7 +370,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         Log.d("haha", "数据库里有" + beanList.size() + "条数据");
-        if(beanList.size()!=0)
+        if (beanList.size() != 0)
         {
             layoutManager = new LinearLayoutManager(this);
             recyclerView.setLayoutManager(layoutManager);
@@ -352,7 +378,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
             {
                 @Override
-                public void onItemClick(View view, BillBean bean,ImageView imageView)
+                public void onItemClick(View view, BillBean bean, ImageView imageView)
                 {
                     intentToDetailActivity(bean, imageView);
 
@@ -365,12 +391,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 public void onScrolled(RecyclerView recyclerView, int dx, int dy)
                 {
                     super.onScrolled(recyclerView, dx, dy);
-                    if(dy>20)
+                    if (dy > 20)
                     {
                         ItemAnimition.translationToDisapper(addBillButton);
                         ItemAnimition.toolBarDisappear(toolbar);
 
-                    }else if(dy<-10)
+                    } else if (dy < -10)
                     {
                         ItemAnimition.translationToAppear(addBillButton);
                         ItemAnimition.toolBarAppear(toolbar);
@@ -386,7 +412,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         }*/
     }
 
-    private void intentToDetailActivity( BillBean bean,ImageView imageView)
+    private void intentToDetailActivity(BillBean bean, ImageView imageView)
     {
         Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
         i.putExtra("TheBeanInfo", bean.getDateInfo());
@@ -394,6 +420,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         String transitionName = "PicShare";
         ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
         startActivity(i, transitionActivityOptions.toBundle());
+        isdisappear = false;
     }
 
 
@@ -441,14 +468,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             {
                 String jsonString = response.body().string();
                 Log.d("haha", "收到了JSON数据" + jsonString);
-                if(jsonString.equals("新用户"))
+                if (jsonString.equals("新用户"))
                 {
                     runOnUiThread(new Runnable()
                     {
                         @Override
                         public void run()
                         {
-                            pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);                            pDialog.setTitleText("欢迎你新用户");
+                            pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                            pDialog.setTitleText("欢迎你新用户");
                             pDialog.setTitleText("欢迎你新用户");
                             pDialog.show();
                         }
@@ -458,9 +486,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 try
                 {
                     JSONObject object = new JSONObject(jsonString);
-                    JSONArray jsonArray= object.getJSONArray("billsname");
+                    JSONArray jsonArray = object.getJSONArray("billsname");
                     List<String> billsName = new ArrayList<>();
-                    for(int i=0;i<jsonArray.length();i++)
+                    for (int i = 0; i < jsonArray.length(); i++)
                     {
                         billsName.add((String) jsonArray.get(i));
                     }
@@ -484,6 +512,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     /**
      * 获取到了所有帐单名，此方法将每个账单每条信息从服务器中取出来
+     *
      * @param billsName
      * @param touristsMap
      * @param pDialog
@@ -541,7 +570,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     try
                     {
                         JSONObject object = new JSONObject(JSONString);
-                        for(int i=1;i<=object.length();i++)
+                        for (int i = 1; i <= object.length(); i++)
                         {
                             JSONObject beanObject = object.getJSONObject(String.valueOf(i));
                             Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
@@ -566,11 +595,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                     pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
                                     pDialog.setTitleText("获取数据成功");
                                     pDialog.show();
-                                    saveRealBillNameToSharedPreferences(AverageBillActivity.this,billsName.get(0));
+                                    saveRealBillNameToSharedPreferences(AverageBillActivity.this, billsName.get(0));
                                     showRecyclerView();
                                 }
                             });
-                        }else
+                        } else
                         {
                             Log.d("haha", "count 为" + count[0]);
                         }
@@ -590,7 +619,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private String getTime()
     {
-        java.text.SimpleDateFormat formatter=new java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+        java.text.SimpleDateFormat formatter = new java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
         Date date = new Date(System.currentTimeMillis());
         String text = formatter.format(date);
         Log.d("info", text);
@@ -613,7 +642,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 showMateriaDialog();
                 break;
             case R.id.returnLog:
-                final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this,SweetAlertDialog.WARNING_TYPE);
+                final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
                 confirmReturnDialog.setTitleText("你确认要退出吗");
                 confirmReturnDialog.setConfirmText("确定");
                 confirmReturnDialog.setCancelText("再留一会儿");
@@ -639,13 +668,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 confirmReturnDialog.show();
                 break;
             case R.id.floatbutton://此按钮即是添加账单按钮
-                if(!getRealBillNameFromSharedPreferences(this).equals(""))
+                if (!getRealBillNameFromSharedPreferences(this).equals(""))
                 {
                     addBill();
-                }else
+                } else
                 {
                     ItemAnimition.confirmAndBigger(addBillButton);
-                    Snackbar.make(addBillButton,"请先打开侧滑菜单添加朋友!",Snackbar.LENGTH_LONG).setAction("OK", new View.OnClickListener()
+                    Snackbar.make(addBillButton, "请先打开侧滑菜单添加朋友!", Snackbar.LENGTH_LONG).setAction("OK", new View.OnClickListener()
                     {
                         @Override
                         public void onClick(View v)
@@ -657,6 +686,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
                 break;
             case R.id.settlemoney:
+                isdisappear = false;
                 Intent intent = new Intent(this, SettleMoneyActivity.class);
                 intent.putExtra("transition", "fade");
                 intent.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -664,7 +694,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this).toBundle());
                     finishThisActivity(this);
-                }else
+                } else
                 {
                     startActivity(intent);
                 }
@@ -705,6 +735,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private void InputDescripe()//在对话框里输入账单信息
     {
+        isdisappear = false;
         final MaterialDialog materialDialog = new MaterialDialog(this);
         materialDialog.setCanceledOnTouchOutside(true);
         final LayoutInflater layoutInflater = LayoutInflater.from(AverageBillActivity.this);
@@ -721,13 +752,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         });
         materialDialog.show();
 
-        final Button confrimButton = (Button)view.findViewById(R.id.confirmButton);
+        final Button confrimButton = (Button) view.findViewById(R.id.confirmButton);
         Spinner spinner = (Spinner) view.findViewById(R.id.name_spinner);
         moneyEditText = (EditText) view.findViewById(R.id.money_num_edit);
         descripeEditText = (EditText) view.findViewById(R.id.des_bill_edit);
 
-        final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName,getRealBillNameFromSharedPreferences(this));
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(AverageBillActivity.this,android.R.layout.simple_spinner_item,nameList);
+        final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this));
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(AverageBillActivity.this, android.R.layout.simple_spinner_item, nameList);
         spinner.setAdapter(adapter);
 
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()//设置spinner的点击事件
@@ -752,11 +783,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             public void onClick(View v)
             {
                 //存入数据库,并更新UI
-                if("".equals(descripeEditText.getText().toString().trim())||"".equals(moneyEditText.getText().toString().trim()))
+                if ("".equals(descripeEditText.getText().toString().trim()) || "".equals(moneyEditText.getText().toString().trim()))
                 {
                     ItemAnimition.confirmAndBigger(confrimButton);
                     Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
-                }else
+                } else
                 {
 
                     ItemAnimition.confirmAndBigger(confrimButton);
@@ -792,10 +823,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             }
                             String[] perms = {"android.permission.CAMERA"};
                             int permsRequestCode = 200;
-                            if(!hasPermission("android.permission.CAMERA"))
+                            if (!hasPermission("android.permission.CAMERA"))
                             {
                                 requestPermissions(perms, permsRequestCode);
-                            }else
+                            } else
                             {
                                 imageUri = Uri.fromFile(outputImage);//将文件路径转化为Uri对象
                                 Intent intent = new Intent("android.media.action.IMAGE_CAPTURE");
@@ -839,14 +870,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         });
 
     }
+
     public void onRequestPermissionsResult(int permsRequestCode, String[] permissions, int[] grantResults)
     {
-        switch(permsRequestCode)
+        isdisappear = false;
+        switch (permsRequestCode)
         {
 
             case 200:
-                boolean cameraAccepted = grantResults[0]==PackageManager.PERMISSION_GRANTED;
-                if(cameraAccepted)
+                boolean cameraAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                if (cameraAccepted)
                 {
                     //授权成功之后，调用系统相机进行拍照操作等
                     imageUri = Uri.fromFile(outputImage);//将文件路径转化为Uri对象
@@ -855,7 +888,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     intent.putExtra("name", bean.getName());
                     startActivityForResult(intent, TAKE_PHOTO);
                     materialDialog.dismiss();
-                }else
+                } else
                 {
                     Toast.makeText(this, "需要相机权限才能拍照哦", Toast.LENGTH_SHORT).show();
                     //用户授权拒绝之后，友情提示一下就可以了
@@ -863,55 +896,58 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 break;
         }
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
+        isdisappear = false;
         super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode){
+        switch (requestCode)
+        {
             case TAKE_PHOTO:
                 Bitmap bitmap = null;
-                    if(resultCode==RESULT_OK)
-                    {
-                        Intent intent = new Intent("com.android.camera.action.CROP");
-                        intent.setDataAndType(imageUri, "image/*");
-                        intent.putExtra("scale", true);
-                        intent.putExtra("aspectX", 6);//裁切的宽比例
-                        intent.putExtra("aspectY", 3);//裁切的高比例
-                        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-                        bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f,  816.0f);//保存原图
-                        bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
-                        bean.setPicadress(imageUri.toString());
-                        startActivityForResult(intent,CROP_PHOTO);
-                    }
+                if (resultCode == RESULT_OK)
+                {
+                    Intent intent = new Intent("com.android.camera.action.CROP");
+                    intent.setDataAndType(imageUri, "image/*");
+                    intent.putExtra("scale", true);
+                    intent.putExtra("aspectX", 6);//裁切的宽比例
+                    intent.putExtra("aspectY", 3);//裁切的高比例
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+                    bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f, 816.0f);//保存原图
+                    bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
+                    bean.setPicadress(imageUri.toString());
+                    startActivityForResult(intent, CROP_PHOTO);
+                }
                 break;
             case CROP_PHOTO://从相机过来裁剪照片
-                    if (resultCode == RESULT_OK)
-                    {
-                            bitmap = Compressor.getDefault(this).compressToBitmap(outputImage);
-                            bean.setPicInfo(BitmapHandler.convertBitmapToByte(bitmap));
-                            /**
-                             * 数据获取完毕，增加卡片
-                             */
-                            addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-                    }
+                if (resultCode == RESULT_OK)
+                {
+                    bitmap = Compressor.getDefault(this).compressToBitmap(outputImage);
+                    bean.setPicInfo(BitmapHandler.convertBitmapToByte(bitmap));
+                    /**
+                     * 数据获取完毕，增加卡片
+                     */
+                    addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+                }
                 break;
             case CHOOSE_PHOTO:
                 imgUri = data.getData();
                 Intent intent = new Intent("com.android.camera.action.CROP");
                 intent.setDataAndType(imgUri, "image/*");
-                bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f,  816.0f);//保存原图
+                bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);//保存原图
                 bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
                 bean.setPicadress(imgUri.toString());
                 intent.putExtra("scale", true);
                 intent.putExtra("aspectX", 4);//裁切的宽比例
                 intent.putExtra("aspectY", 3);//裁切的高比例
                 intent.putExtra(MediaStore.EXTRA_OUTPUT, imgUri);
-                startActivityForResult(intent,CROP_PHOTO2);
+                startActivityForResult(intent, CROP_PHOTO2);
                 break;
             case CROP_PHOTO2://从相册来裁剪照片
-                if(resultCode==RESULT_OK)
+                if (resultCode == RESULT_OK)
                 {
-                    bitmap= tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f,  816.0f);
+                    bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);
                     bean.setPicInfo(BitmapHandler.convertBitmapToByte(bitmap));
                 }
                 addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -922,30 +958,30 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void addNewCard(String billName)
     {
         saveBeanToDataBase(billName);
-        Log.d("haha", "在addcard方法中"+bean.toString());
+        Log.d("haha", "在addcard方法中" + bean.toString());
         showRecyclerView();
     }
 
     /**
-     **将一个完整的bean存入数据库,注意要把bean的pic的bitmap格式转换为String
+     * *将一个完整的bean存入数据库,注意要把bean的pic的bitmap格式转换为String
      * "name text not null," +
-     "money integer not null," +
-     "descripe text not null," +
-     "pic text not null," +
-     "date text not null)"
+     * "money integer not null," +
+     * "descripe text not null," +
+     * "pic text not null," +
+     * "date text not null)"
      */
     private void saveBeanToDataBase(String billName)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,billName);
-        SQLiteDatabase db=dbHelper.getWritableDatabase();
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
-        values.put("name",bean.getName());
-        values.put("money",bean.getMoney());
-        values.put("descripe",bean.getDescripInfo());
+        values.put("name", bean.getName());
+        values.put("money", bean.getMoney());
+        values.put("descripe", bean.getDescripInfo());
         values.put("pic", bean.getPicInfo());
         values.put("oldpic", bean.getOldpicInfo());
-        values.put("date",bean.getDateInfo());
+        values.put("date", bean.getDateInfo());
         values.put("picadress", bean.getPicadress());
         db.insert(billName, null, values);
         Log.d("haha", "成功存入" + bean.toString());
@@ -959,16 +995,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
 
         //浮动按钮的动画
-        materialDialog.setTitle("此次出行的朋友的名字?");
+        materialDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.dialog_layout);
+        materialDialog.setMyTitle("此次出行的朋友的名字?");
         materialDialog.setCanceledOnTouchOutside(true);
-        final LayoutInflater layoutInflater = LayoutInflater.from(AverageBillActivity.this);
-        final View view = layoutInflater.inflate(R.layout.dialog_layout, (ViewGroup) findViewById(R.id.dialog_lauout));
-        materialDialog.setContentView(view);
-        materialDialog.setBackgroundResource(R.color.dialogColor);
         materialDialog.show();
-
-        numOfManButton = (FloatingActionButton) view.findViewById(R.id.numofManButton);
-        editText = (EditText) view.findViewById(R.id.editText);
+        numOfManButton = (FloatingActionButton) materialDialog.findViewById(R.id.numofManButton);
+        editText = (EditText) materialDialog.findViewById(R.id.editText);
         numOfManButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -977,28 +1009,29 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 /*
                 //提取输入框中人名,并存入数据库
                */
-                if("".equals(editText.getText().toString().trim()))
+                if ("".equals(editText.getText().toString().trim()))
                 {
                     ItemAnimition.confirmAndBigger(numOfManButton);
                     Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
-                }else
+                } else
                 {
                     final String nameString = editText.getText().toString();
+                    materialDialog.dismiss();
 
-
-
-
-
-                    materialDialog.setTitle("旅行日志名字？");
+                    materialDialog = new tool.WonderfulDialog(AverageBillActivity.this, R.style.Dialog, R.layout.dialog_layout);
+                    materialDialog.setMyTitle("旅行日志名字？");
                     editText.setText("");
                     editText.setHint("");
+                    materialDialog.show();
+                    numOfManButton = (FloatingActionButton) materialDialog.findViewById(R.id.numofManButton);
+                    editText = (EditText) materialDialog.findViewById(R.id.editText);
                     numOfManButton.setOnClickListener(new View.OnClickListener()
                     {
                         @Override
                         public void onClick(final View v)
                         {
                             AnimationSet animationSet = new AnimationSet(AverageBillActivity.this, null);
-                            animationSet.addAnimation(new AlphaAnimation(1f,0f));
+                            animationSet.addAnimation(new AlphaAnimation(1f, 0f));
                             animationSet.setDuration(getResources().getInteger(android.R.integer.config_shortAnimTime));
                             animationSet.setAnimationListener(new Animation.AnimationListener()
                             {
@@ -1011,20 +1044,20 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                 @Override
                                 public void onAnimationEnd(Animation animation)
                                 {
-                                    if("".equals(editText.getText().toString().trim()))
+                                    if ("".equals(editText.getText().toString().trim()))
                                     {
                                         ItemAnimition.confirmAndBigger(numOfManButton);
                                         Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
-                                    }else
+                                    } else
                                     {
                                         String billName = editText.getText().toString();
-                                        saveRealBillNameToSharedPreferences(AverageBillActivity.this,billName);
+                                        saveRealBillNameToSharedPreferences(AverageBillActivity.this, billName);
                                         saveBillNameToDB(billName);
                                         SharedPreferenceHelper.SaveNameToSharedPreference(AverageBillActivity.this
-                                                ,nameString,SharedPreferenceName,billName);
+                                                , nameString, SharedPreferenceName, billName);
                                         materialDialog.dismiss();
                                         titleText.setText(billName);
-                                        Snackbar.make(addBillButton, "保存成功"+billName, Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
+                                        Snackbar.make(addBillButton, "保存成功" + billName, Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
                                         {
                                             @Override
                                             public void onClick(View v)
@@ -1052,18 +1085,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     }
 
-    private void saveBeanToDataBase(String BillName,BillBean bean)
+    private void saveBeanToDataBase(String BillName, BillBean bean)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,BillName);
-        SQLiteDatabase db=dbHelper.getWritableDatabase();
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
-        values.put("name",bean.getName());
-        values.put("money",bean.getMoney());
-        values.put("descripe",bean.getDescripInfo());
+        values.put("name", bean.getName());
+        values.put("money", bean.getMoney());
+        values.put("descripe", bean.getDescripInfo());
         values.put("pic", bean.getPicInfo());
         values.put("oldpic", bean.getOldpicInfo());
-        values.put("date",bean.getDateInfo());
+        values.put("date", bean.getDateInfo());
         values.put("picadress", bean.getPicadress());
         db.insert(BillName, null, values);
         Log.d("haha", "成功存入" + bean.toString());
@@ -1076,14 +1109,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
         Cursor cursor = db.query(USERNAME + "TableList", null, "tableName = ?", new String[]{name}, null, null, null);
-        if(cursor.getCount()==0)
+        if (cursor.getCount() == 0)
         {
             ContentValues values = new ContentValues();
             values.put("tableName", name);
             db.insert(USERNAME + "TableList", null, values);
             Log.d("haha", "成功将表名" + name + "存入数据库");
             values.clear();
-        }else
+        } else
         {
             Log.d("haha", name + "重复了");
         }
@@ -1092,23 +1125,24 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
 
-
     /**
      * name text not null," +
-     "money integer not null," +
-     "descripe text not null," +
-     "pic text not null," +
-     "date text not null)"
+     * "money integer not null," +
+     * "descripe text not null," +
+     * "pic text not null," +
+     * "date text not null)"
+     *
      * @return
      */
     public List<BillBean> getBeanFromDataBase(String BillName)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1,BillName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         List<BillBean> beanList = new ArrayList<>();
-        try{
-            SQLiteDatabase db=dbHelper.getWritableDatabase();
+        try
+        {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
             Cursor cursor = db.query(BillName, null, null, null, null, null, null);
-            if(cursor!=null)
+            if (cursor != null)
             {
                 String[] columns = cursor.getColumnNames();
                 while (cursor.moveToNext())
@@ -1141,15 +1175,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                 break;
                         }
                     }
-                    Log.d("haha", "从数据库获得了"+bean.toString());
+                    Log.d("haha", "从数据库获得了" + bean.toString());
                     beanList.add(bean);
                 }
                 cursor.close();
-            }else
+            } else
             {
                 Toast.makeText(this, "database is null", Toast.LENGTH_SHORT).show();
             }
-        }catch (Exception e)
+        } catch (Exception e)
         {
             return beanList;
         }
@@ -1159,43 +1193,66 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void createPathIfNotExits(String path)
     {
         File file = new File(path);
-           if (!file.exists())
-           {
-                file.mkdir();
-           }
+        if (!file.exists())
+        {
+            file.mkdir();
+        }
     }
 
-    private boolean OverLollipop(){
-        return(Build.VERSION.SDK_INT>Build.VERSION_CODES.LOLLIPOP_MR1);
+    private boolean OverLollipop()
+    {
+        return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
     }
-    private boolean hasPermission(String permission){
 
-        if(OverLollipop()){
+    private boolean hasPermission(String permission)
+    {
 
-            return(checkSelfPermission(permission)== PackageManager.PERMISSION_GRANTED);
+        if (OverLollipop())
+        {
+
+            return (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
 
         }
 
         return true;
 
     }
-    private boolean checkColumnExists(SQLiteDatabase db, String tableName, String columnName) {
-        boolean result = false ;
-        Cursor cursor = null ;
 
-        try{
-            cursor = db.rawQuery( "select * from sqlite_master where name = ? and sql like ?"
-                    , new String[]{tableName , "%" + columnName + "%"} );
-            result = null != cursor && cursor.moveToFirst() ;
-        }catch (Exception e){
-            Log.e(TAG,"checkColumnExists..." + e.getMessage()) ;
-        }finally{
-            if(null != cursor && !cursor.isClosed()){
-                cursor.close() ;
+    private boolean checkColumnExists(SQLiteDatabase db, String tableName, String columnName)
+    {
+        boolean result = false;
+        Cursor cursor = null;
+
+        try
+        {
+            cursor = db.rawQuery("select * from sqlite_master where name = ? and sql like ?"
+                    , new String[]{tableName, "%" + columnName + "%"});
+            result = null != cursor && cursor.moveToFirst();
+        } catch (Exception e)
+        {
+            Log.e(TAG, "checkColumnExists..." + e.getMessage());
+        } finally
+        {
+            if (null != cursor && !cursor.isClosed())
+            {
+                cursor.close();
             }
         }
 
-        return result ;
+        return result;
     }
 
+    public int getAllBillNum()
+    {
+        List<String> billNameList = getBillList();//获取所有账单名称
+        int sumofbill = 0;
+        for (int index = 0; index < billNameList.size(); index++)
+        {
+            final String billName = billNameList.get(index);
+            final List<BillBean> beanitemList = getBeanFromDataBase(billName);
+            sumofbill += beanitemList.size();
+        }
+        Log.d("haha", "共有" + sumofbill + "个bill");
+        return sumofbill;
+    }
 }
