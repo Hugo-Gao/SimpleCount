@@ -1,29 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
-              android:layout_width="match_parent"
-              android:layout_height="600dp"
-              android:id="@+id/wrapper"
-              android:gravity="center">
-    <TextView
-        android:layout_width="wrap_content"
-        android:paddingTop="10dp"
-        android:layout_height="wrap_content"
-        android:text="为你的日志选择图片"
-        android:layout_gravity="center_horizontal"
-        android:textSize="30dp"/>
-    <Button
-        android:paddingTop="10dp"
-        android:layout_width="150dp"
-        android:layout_height="wrap_content"
-        android:text="从相册选取照片"
-        android:id="@+id/choose_from_gallery"/>
+<android.support.v7.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+                                    xmlns:app="http://schemas.android.com/apk/res-auto"
+                                    android:id="@+id/wrapper"
+                                    android:layout_width="300dp"
+                                    android:layout_height="200dp"
+                                    android:gravity="center"
+                                    app:cardCornerRadius="15dp"
+                                    android:orientation="vertical"
+    >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/mainColor"
+        android:orientation="vertical"
+        >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="25dp"
+            android:text="为你的日志添加日志"
+            android:textSize="30dp"/>
+    </LinearLayout>
+
+
 
     <Button
-        android:layout_width="150dp"
-        android:layout_height="wrap_content"
-        android:text="拍照"
-        android:id="@+id/take_picture"/>
+        android:id="@+id/take_picture"
+        android:layout_width="90dp"
+        android:layout_height="45dp"
+        android:layout_gravity="right"
+        android:layout_marginTop="120dp"
+        android:layout_marginRight="30dp"
+        android:background="@drawable/material_button"
+        android:text="拍照"/>
+
+    <Button
+        android:id="@+id/choose_from_gallery"
+        android:layout_width="90dp"
+        android:layout_height="45dp"
+        android:layout_gravity=""
+        android:layout_marginTop="120dp"
+        android:layout_marginLeft="30dp"
+        android:background="@drawable/material_button2"
+        android:text="相册"/>
 
 
-</LinearLayout>
+
+</android.support.v7.widget.CardView>

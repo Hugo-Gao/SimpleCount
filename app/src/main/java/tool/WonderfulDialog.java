@@ -21,7 +21,9 @@ public class WonderfulDialog extends Dialog
     private Context context;
     private int resId;
     private int layoutId;
-    private String title;
+    private String title=null;
+    private int height;
+    private int width;
     public WonderfulDialog(Context context)
     {
         super(context);
@@ -36,11 +38,13 @@ public class WonderfulDialog extends Dialog
         resId = themeResId;
     }
 
-    public WonderfulDialog(Context context, int  themeResId, int  layoutId)
+    public WonderfulDialog(Context context, int  themeResId, int  layoutId,int height,int width)
     {
         super(context, themeResId);
         this.layoutId = layoutId;
         this.context = context;
+        this.height = height;
+        this.width = width;
 
     }
 
@@ -51,11 +55,12 @@ public class WonderfulDialog extends Dialog
         super.onCreate(savedInstanceState);
         View view = View.inflate(context, layoutId, null);
         TextView titleText = (TextView) view.findViewById(R.id.title);
-        titleText.setText(title);
+        if(title!=null)
+        {
+            titleText.setText(title);
+        }
         setContentView(view);
         initSize();
-
-
     }
 
 
@@ -65,8 +70,8 @@ public class WonderfulDialog extends Dialog
         Window window = getWindow();
         WindowManager.LayoutParams lp = window.getAttributes();
         lp.gravity = Gravity.CENTER;
-        lp.width = DensityUtils.dp2px(context, 300);
-        lp.height = DensityUtils.dp2px(context, 250);
+        lp.width = DensityUtils.dp2px(context, width);
+        lp.height = DensityUtils.dp2px(context, height);
         window.setAttributes(lp);
     }
 

@@ -24,9 +24,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
@@ -55,7 +53,6 @@ import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
 import database.TableListDBHelper;
 import id.zelory.compressor.Compressor;
-import me.drakeet.materialdialog.MaterialDialog;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -68,6 +65,7 @@ import tool.BitmapHandler;
 import tool.CardViewAdapter;
 import tool.ItemAnimition;
 import tool.SharedPreferenceHelper;
+import tool.WonderfulDialog;
 
 import static android.content.ContentValues.TAG;
 import static tool.AcivityHelper.finishThisActivity;
@@ -112,6 +110,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private final String getBillsNameUri = "http://192.168.253.1:8070/getbillsname";
     private final String postBillNameListUri = "http://192.168.253.1:8070/postBillList";
     private final String getDataUri = "http://192.168.253.1:8070/getdata";
+    private final String testUri = "http://192.168.253.1:8070";
     private TextView titleText;
     private Button finish_btn;
     private TextView viewAllBillText;
@@ -158,6 +157,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
         titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
+        titleText.setText("");
         if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -219,6 +219,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void postToRemoteDB()
     {
+
+        checkServerConnect();
         List<String> billNameList = getBillList();//获取所有账单名称
         postBillNameListToDB(billNameList, USERNAME);
         final int[] count = {0};
@@ -228,7 +230,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             final String billName = billNameList.get(index);
             final List<BillBean> beanitemList = getBeanFromDataBase(billName);
             final int size = beanitemList.size();
-            Thread thread=new Thread(new Runnable()
+            Thread thread = new Thread(new Runnable()
             {
                 @Override
                 public void run()
@@ -244,8 +246,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         formBuilder.add("money", beanitemList.get(i).getMoneyString());
                         formBuilder.add("describe", beanitemList.get(i).getDescripInfo());
                         formBuilder.add("date", beanitemList.get(i).getDateInfo());
+                        long startTime = System.currentTimeMillis();
                         formBuilder.add("picinfo", Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT));
                         formBuilder.add("oldpicinfo", Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT));
+                        long endTime = System.currentTimeMillis();
+                        Log.d("timelog", "billname is " + billName + " 第" + i + "条" + " 的图片转换时间为" + String.valueOf(endTime - startTime));
                         Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
                         Call call = client.newCall(request);
                         call.enqueue(new Callback()
@@ -253,26 +258,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             @Override
                             public void onFailure(Call call, final IOException e)
                             {
-                                runOnUiThread(new Runnable()
-                                {
-                                    @Override
-                                    public void run()
-                                    {
-                                        if (e.toString() != "java.net.SocketTimeoutException: timeout")
-                                        {
-                                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
-                                            Log.d("net", e.toString());
-                                        }
-                                        count[0]++;
-                                    }
-                                });
+                                count[0]++;
                             }
 
                             @Override
                             public void onResponse(Call call, Response response) throws IOException
                             {
                                 count[0]++;
+                                String responseString = response.body().string();
                                 Log.d("net", "同步" + billName + "第" + count2 + "条数据成功");
+                                Log.d("net", "同步" + billName + "第" + count2 + "条数据状态码为" + responseString);
                             }
                         });
 
@@ -296,14 +291,61 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     @Override
                     public void run()
                     {
+                        if (swipeRefreshLayout.isRefreshing())
+                        {
+                            Snackbar.make(recyclerView, "同步成功", Snackbar.LENGTH_SHORT).show();
+                        }
                         swipeRefreshLayout.setRefreshing(false);
-                        Snackbar.make(recyclerView, "同步成功", Snackbar.LENGTH_SHORT).show();
+
                     }
                 });
 
             }
         });
         thread.start();
+    }
+
+    private void checkServerConnect()
+    {
+        final boolean[] isConnect = {false};
+        OkHttpClient okHttpClient = new OkHttpClient();
+        Request request = new Request.Builder().url(testUri).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        swipeRefreshLayout.setRefreshing(false);
+                        Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String JSONString = response.body().string();
+                Log.d("net", JSONString);
+                if (!JSONString.equals("success"))
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            swipeRefreshLayout.setRefreshing(false);
+                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            }
+        });
     }
 
 
@@ -449,16 +491,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     @Override
                     public void run()
                     {
-                        runOnUiThread(new Runnable()
+                        try
                         {
-                            @Override
-                            public void run()
-                            {
-                                pDialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
-                                pDialog.setTitleText("服务器未连接");
-                                pDialog.show();
-                            }
-                        });
+                            pDialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
+                            pDialog.setTitleText("服务器未连接");
+                            pDialog.show();
+                        } catch (Exception e)
+                        {
+                            pDialog.dismiss();
+                        }
                     }
                 });
             }
@@ -466,25 +507,26 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onResponse(Call call, Response response) throws IOException
             {
-                String jsonString = response.body().string();
-                Log.d("haha", "收到了JSON数据" + jsonString);
-                if (jsonString.equals("新用户"))
-                {
-                    runOnUiThread(new Runnable()
-                    {
-                        @Override
-                        public void run()
-                        {
-                            pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
-                            pDialog.setTitleText("欢迎你新用户");
-                            pDialog.setTitleText("欢迎你新用户");
-                            pDialog.show();
-                        }
-                    });
-                    return;
-                }
                 try
                 {
+                    String jsonString = response.body().string();
+                    Log.d("haha", "收到了JSON数据" + jsonString);
+                    if (jsonString.equals("新用户"))
+                    {
+                        runOnUiThread(new Runnable()
+                        {
+                            @Override
+                            public void run()
+                            {
+                                pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                                pDialog.setTitleText("欢迎你新用户");
+                                pDialog.setTitleText("欢迎你新用户");
+                                pDialog.show();
+                            }
+                        });
+                        return;
+                    }
+
                     JSONObject object = new JSONObject(jsonString);
                     JSONArray jsonArray = object.getJSONArray("billsname");
                     List<String> billsName = new ArrayList<>();
@@ -502,13 +544,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         SaveNameToSharedPreference(AverageBillActivity.this, tourists, SharedPreferenceName, billName);
                     }
                     getEachBillBeanFromServer(billsName, touristsMap, pDialog);
-                } catch (JSONException e)
+                } catch (Exception e)
                 {
                     e.printStackTrace();
+                    pDialog.dismiss();
                 }
             }
         });
     }
+
 
     /**
      * 获取到了所有帐单名，此方法将每个账单每条信息从服务器中取出来
@@ -614,9 +658,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     }
 
+
     /**
      * 获取当前账单创建时间
      */
+
+
     private String getTime()
     {
         java.text.SimpleDateFormat formatter = new java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
@@ -639,7 +686,21 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             case R.id.add_people_button:
                 mMenu.toggleMenu();
-                showMateriaDialog();
+                if (!showMateriaDialog())
+                {
+                    SweetAlertDialog sweetAlertDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
+                    sweetAlertDialog.setTitleText("请先结算再创建账单！");
+                    sweetAlertDialog.setCancelable(true);
+                    sweetAlertDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+                    {
+                        @Override
+                        public void onClick(SweetAlertDialog sweetAlertDialog)
+                        {
+                            sweetAlertDialog.dismiss();
+                        }
+                    });
+                    sweetAlertDialog.show();
+                }
                 break;
             case R.id.returnLog:
                 final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
@@ -679,7 +740,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         @Override
                         public void onClick(View v)
                         {
-
+                            toggleMenu(v);
                         }
                     }).show();
                 }
@@ -736,11 +797,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void InputDescripe()//在对话框里输入账单信息
     {
         isdisappear = false;
-        final MaterialDialog materialDialog = new MaterialDialog(this);
-        materialDialog.setCanceledOnTouchOutside(true);
-        final LayoutInflater layoutInflater = LayoutInflater.from(AverageBillActivity.this);
-        final View view = layoutInflater.inflate(R.layout.bill_descripe_layout, (ViewGroup) findViewById(R.id.wrapper_text_edit));
-        materialDialog.setView(view);
+        final WonderfulDialog materialDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.bill_descripe_layout, 300, 300);
         materialDialog.setCanceledOnTouchOutside(true);
         materialDialog.setOnDismissListener(new DialogInterface.OnDismissListener()
         {
@@ -751,11 +808,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
         });
         materialDialog.show();
-
-        final Button confrimButton = (Button) view.findViewById(R.id.confirmButton);
-        Spinner spinner = (Spinner) view.findViewById(R.id.name_spinner);
-        moneyEditText = (EditText) view.findViewById(R.id.money_num_edit);
-        descripeEditText = (EditText) view.findViewById(R.id.des_bill_edit);
+        final FloatingActionButton confrimButton = (FloatingActionButton) materialDialog.findViewById(R.id.confirmButton);
+        Spinner spinner = (Spinner) materialDialog.findViewById(R.id.name_spinner);
+        moneyEditText = (EditText) materialDialog.findViewById(R.id.money_num_edit);
+        descripeEditText = (EditText) materialDialog.findViewById(R.id.des_bill_edit);
 
         final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(AverageBillActivity.this, android.R.layout.simple_spinner_item, nameList);
@@ -795,11 +851,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     bean.setDescripInfo(descripeEditText.getText().toString());
                     bean.setMoney(Integer.parseInt(moneyEditText.getText().toString()));
                     //下面拍照或者从相册中选取图片
-                    View photoView = layoutInflater.inflate(R.layout.catch_photo, (ViewGroup) findViewById(R.id.wrapper));
-                    materialDialog.setTitle("为你的日志选取图片");
-                    materialDialog.setView(photoView);
-                    Button takePhotoButton = (Button) photoView.findViewById(R.id.take_picture);
-                    Button chooseGalleryButton = (Button) photoView.findViewById(R.id.choose_from_gallery);
+                    materialDialog.dismiss();
+                    final WonderfulDialog wonderfulDialog = new WonderfulDialog(AverageBillActivity.this, R.style.Dialog, R.layout.catch_photo, 200, 300);
+                    wonderfulDialog.setCancelable(false);
+                    wonderfulDialog.show();
+                    Button takePhotoButton = (Button) wonderfulDialog.findViewById(R.id.take_picture);
+                    Button chooseGalleryButton = (Button) wonderfulDialog.findViewById(R.id.choose_from_gallery);
                     takePhotoButton.setOnClickListener(new View.OnClickListener()
                     {
                         @Override
@@ -835,7 +892,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                 startActivityForResult(intent, TAKE_PHOTO);
 
                             }
-                            materialDialog.dismiss();
+                            wonderfulDialog.dismiss();
                         }
                     });
                     chooseGalleryButton.setOnClickListener(new View.OnClickListener()//选择从相册选择相片
@@ -862,7 +919,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                             intent.putExtra("name", bean.getName());
                             startActivityForResult(intent, CHOOSE_PHOTO);
-                            materialDialog.dismiss();
+                            wonderfulDialog.dismiss();
                         }
                     });
                 }
@@ -991,11 +1048,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
 
-    private void showMateriaDialog()
+    private boolean showMateriaDialog()
     {
-
+        if (!checkHaveSettle())
+        {
+            return false;
+        }
         //浮动按钮的动画
-        materialDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.dialog_layout);
+        materialDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.dialog_layout, 230, 300);
         materialDialog.setMyTitle("此次出行的朋友的名字?");
         materialDialog.setCanceledOnTouchOutside(true);
         materialDialog.show();
@@ -1017,8 +1077,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     final String nameString = editText.getText().toString();
                     materialDialog.dismiss();
-
-                    materialDialog = new tool.WonderfulDialog(AverageBillActivity.this, R.style.Dialog, R.layout.dialog_layout);
+                    materialDialog = new tool.WonderfulDialog(AverageBillActivity.this, R.style.Dialog, R.layout.dialog_layout, 230, 300);
                     materialDialog.setMyTitle("旅行日志名字？");
                     editText.setText("");
                     editText.setHint("");
@@ -1082,7 +1141,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
             }
         });
+        return true;
+    }
 
+    private boolean checkHaveSettle()
+    {
+        if (titleText.getText() != "")
+        {
+            return false;
+        }
+        return true;
     }
 
     private void saveBeanToDataBase(String BillName, BillBean bean)
