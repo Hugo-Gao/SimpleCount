@@ -13,7 +13,7 @@
         android:layout_gravity="end|bottom"
         app:fab_size="normal"
         android:layout_margin="16dp"
-        app:elevation="35dp"
+        app:elevation="10dp"
         app:borderWidth="0dp"
         android:src="@mipmap/add"
         android:clickable="true"

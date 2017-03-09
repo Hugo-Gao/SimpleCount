@@ -5,10 +5,12 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.AnimationUtils;
+
+import com.gigamole.infinitecycleviewpager.HorizontalInfiniteCycleViewPager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.List;
 import database.DBOpenHelper;
 import database.TableListDBHelper;
 import tool.AcivityHelper;
-import tool.BillViewAdapter;
+import tool.HorizontalPagerAdapter;
 import tool.SharedPreferenceHelper;
 
 /**
@@ -35,22 +37,29 @@ public class BillListActivity extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.billlist_layout);
-        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         USERNAME = SharedPreferenceHelper.getTableNameBySP(this);
         tableListDBHelper=new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
         itemList=getItemList();
-        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 2);
-        recyclerView.setLayoutManager(layoutManager);
-        BillViewAdapter adapter = new BillViewAdapter(this, itemList);
-        adapter.setOnItemClickListener(new BillViewAdapter.onRecyclerViewItemClickListen()
+
+        final HorizontalInfiniteCycleViewPager infiniteCycleViewPager =
+                (HorizontalInfiniteCycleViewPager)findViewById(R.id.hicvp);
+        HorizontalPagerAdapter adapter = new HorizontalPagerAdapter(itemList, this);
+        infiniteCycleViewPager.setAdapter(adapter);
+        adapter.setOnItemClickViewListener(new HorizontalPagerAdapter.onItemClickViewListener()
         {
             @Override
-            public void onitemView(View view, String billName)
+            public void clickItem(View view, String billName)
             {
                 intentToHomeActivity(billName);
             }
         });
-        recyclerView.setAdapter(adapter);
+        infiniteCycleViewPager.setScrollDuration(500);
+        infiniteCycleViewPager.setInterpolator( AnimationUtils.loadInterpolator(this, android.R.anim.overshoot_interpolator));
+        infiniteCycleViewPager.setMediumScaled(true);
+        infiniteCycleViewPager.setMaxPageScale(0.9F);
+        infiniteCycleViewPager.setMinPageScale(0.8F);
+        infiniteCycleViewPager.setCenterPageScaleOffset(30.0F);
+        infiniteCycleViewPager.setMinPageScaleOffset(5.0F);
 
 
     }

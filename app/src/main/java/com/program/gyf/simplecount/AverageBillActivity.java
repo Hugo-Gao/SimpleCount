@@ -650,6 +650,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     } catch (JSONException e)
                     {
                         e.printStackTrace();
+                        pDialog.dismiss();
                     }
 
                 }
@@ -704,29 +705,38 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 break;
             case R.id.returnLog:
                 final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
-                confirmReturnDialog.setTitleText("你确认要退出吗");
-                confirmReturnDialog.setConfirmText("确定");
-                confirmReturnDialog.setCancelText("再留一会儿");
-                confirmReturnDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+
+                try
                 {
-                    @Override
-                    public void onClick(SweetAlertDialog sweetAlertDialog)
+                    confirmReturnDialog.setTitleText("你确认要退出吗");
+                    confirmReturnDialog.setConfirmText("确定");
+                    confirmReturnDialog.setCancelText("再留一会儿");
+                    confirmReturnDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
                     {
-                        saveRealBillNameToSharedPreferences(AverageBillActivity.this, "");
-                        Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
-                        startActivity(intent);
-                        AverageBillActivity.this.finish();
-                    }
-                });
-                confirmReturnDialog.setCancelClickListener(new SweetAlertDialog.OnSweetClickListener()
+                        @Override
+                        public void onClick(SweetAlertDialog sweetAlertDialog)
+                        {
+                            confirmReturnDialog.dismiss();
+                            saveRealBillNameToSharedPreferences(AverageBillActivity.this, "");
+                            Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
+                            startActivity(intent);
+                            AverageBillActivity.this.finish();
+                        }
+                    });
+                    confirmReturnDialog.setCancelClickListener(new SweetAlertDialog.OnSweetClickListener()
+                    {
+                        @Override
+                        public void onClick(SweetAlertDialog sweetAlertDialog)
+                        {
+                            confirmReturnDialog.dismiss();
+                        }
+                    });
+                    confirmReturnDialog.show();
+                } catch (Exception e)
                 {
-                    @Override
-                    public void onClick(SweetAlertDialog sweetAlertDialog)
-                    {
-                        confirmReturnDialog.dismiss();
-                    }
-                });
-                confirmReturnDialog.show();
+                    e.printStackTrace();
+                    confirmReturnDialog.dismiss();
+                }
                 break;
             case R.id.floatbutton://此按钮即是添加账单按钮
                 if (!getRealBillNameFromSharedPreferences(this).equals(""))

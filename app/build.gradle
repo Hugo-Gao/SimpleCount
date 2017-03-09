@@ -49,6 +49,7 @@ dependencies {
     compile 'com.squareup.okio:okio:1.7.0'
     compile 'com.squareup.okhttp3:okhttp:3.2.0'
     compile 'com.squareup.okio:okio:1.7.0'
+    compile 'com.github.devlight:infinitecycleviewpager:1.0.2'
     compile 'cn.pedant.sweetalert:library:1.3'
 }
 

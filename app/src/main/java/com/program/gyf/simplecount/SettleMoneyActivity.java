@@ -219,7 +219,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
 
                 break;
             case R.id.finish_btn:
-                SweetAlertDialog pDialog = new SweetAlertDialog(SettleMoneyActivity.this, SweetAlertDialog.NORMAL_TYPE);
+                final SweetAlertDialog pDialog = new SweetAlertDialog(SettleMoneyActivity.this, SweetAlertDialog.NORMAL_TYPE);
                 pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
                 pDialog.setTitleText("你确定要结算了吗");
                 pDialog.setCancelable(true);
@@ -228,6 +228,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
                     @Override
                     public void onClick(SweetAlertDialog sweetAlertDialog)
                     {
+                        pDialog.dismiss();
                         finishBill();
                     }
                 });
