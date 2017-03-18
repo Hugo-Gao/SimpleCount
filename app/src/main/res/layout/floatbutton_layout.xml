@@ -18,7 +18,7 @@
         android:src="@mipmap/add"
         android:clickable="true"
         android:background="?android:attr/selectableItemBackground"
-        android:backgroundTint="#795548"
+        android:backgroundTint="@color/colorAccent"
         />
 
 </android.support.design.widget.CoordinatorLayout>

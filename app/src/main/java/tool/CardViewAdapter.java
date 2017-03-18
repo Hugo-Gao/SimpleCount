@@ -1,6 +1,7 @@
 package tool;
 
 import android.content.Context;
+import android.graphics.Typeface;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -103,6 +104,8 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
         {
             super(itemView);
             dateInfo = (TextView) itemView.findViewById(R.id.date_bill);
+            Typeface customFont = Typeface.createFromAsset(context.getAssets(), "SourceHanSansCN-Light.ttf");
+            dateInfo.setTypeface(customFont);
             picInfo = (ImageView) itemView.findViewById(R.id.pic_address);
         }
     }

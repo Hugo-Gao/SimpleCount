@@ -1,7 +1,12 @@
 package tool;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.renderscript.Allocation;
+import android.renderscript.Element;
+import android.renderscript.RenderScript;
+import android.renderscript.ScriptIntrinsicBlur;
 import android.util.Base64;
 import android.util.Log;
 
@@ -13,6 +18,38 @@ import java.io.ByteArrayOutputStream;
 
 public class BitmapHandler
 {
+    /**
+     * 图片缩放比例
+     */
+    private static final float BITMAP_SCALE = 0.4f;
+
+    /**
+     * 图片模糊度
+     */
+    private static final float BLUR_RADIUS=15f;
+
+
+    public static Bitmap blur(Context context, Bitmap image)
+    {
+        int width = Math.round(image.getWidth() * BITMAP_SCALE);
+        int height = Math.round(image.getHeight() * BITMAP_SCALE);
+        Bitmap inputBitmap = Bitmap.createScaledBitmap(image, width, height, false);
+        Bitmap outBitmap = Bitmap.createBitmap(inputBitmap);
+
+        RenderScript rs = RenderScript.create(context);
+        ScriptIntrinsicBlur blurScrip = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
+
+        Allocation tmpIn = Allocation.createFromBitmap(rs, inputBitmap);
+        Allocation tmpOut = Allocation.createFromBitmap(rs, outBitmap);
+
+        blurScrip.setRadius(BLUR_RADIUS);
+        blurScrip.setInput(tmpIn);
+        blurScrip.forEach(tmpOut);
+
+        tmpOut.copyTo(outBitmap);
+        return outBitmap;
+    }
+
     public static String ConvertBitMapToString(Bitmap bitmap)
     {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();// outputstream
@@ -34,15 +71,15 @@ public class BitmapHandler
                             bitmapArray.length);
 
             return bitmap;
-        }
-        catch (Exception e)
+        } catch (Exception e)
         {
             return null;
         }
     }
+
     public static byte[] convertBitmapToByte(Bitmap bmp)
     {
-        if(bmp==null)
+        if (bmp == null)
         {
             Log.d("haha", "bmp is null");
 
@@ -54,45 +91,54 @@ public class BitmapHandler
 
     public static Bitmap convertByteToBitmap(byte[] data)
     {
-        if(data!=null)
+        if (data != null)
         {
             BitmapFactory.Options opts = new BitmapFactory.Options();
             opts.inSampleSize = 2;//图片高宽度都为原来的二分之一，即图片大小为原来的大小的四分之一
             opts.inTempStorage = new byte[5 * 1024]; //设置16MB的临时存储空间（不过作用还没看出来，待验证）
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, opts);
             return bitmap;
-        }else
+        } else
         {
             return null;
         }
     }
-    public static Bitmap bitmpCulate(byte[] data){
+
+    public static Bitmap bitmpCulate(byte[] data)
+    {
         BitmapFactory.Options opts = new BitmapFactory.Options();
 //      opts.inJustDecodeBounds = true;
 //      BitmapFactory.decodeByteArray(data, 0, data.length, opts);
-        opts.inSampleSize=2;//图片高宽度都为原来的二分之一，即图片大小为原来的大小的四分之一
-        opts.inTempStorage = new byte[5*1024]; //设置16MB的临时存储空间（不过作用还没看出来，待验证）
-        opts.inSampleSize = computeSampleSize(opts, -1, 128*128);
+        opts.inSampleSize = 2;//图片高宽度都为原来的二分之一，即图片大小为原来的大小的四分之一
+        opts.inTempStorage = new byte[5 * 1024]; //设置16MB的临时存储空间（不过作用还没看出来，待验证）
+        opts.inSampleSize = computeSampleSize(opts, -1, 128 * 128);
         opts.inJustDecodeBounds = false;
-        return  BitmapFactory.decodeByteArray(data, 0, data.length, opts);
+        return BitmapFactory.decodeByteArray(data, 0, data.length, opts);
     }
+
     public static int computeSampleSize(BitmapFactory.Options options,
-                                        int minSideLength, int maxNumOfPixels) {
-        int initialSize = computeInitialSampleSize(options, minSideLength,maxNumOfPixels);
+                                        int minSideLength, int maxNumOfPixels)
+    {
+        int initialSize = computeInitialSampleSize(options, minSideLength, maxNumOfPixels);
 
         int roundedSize;
-        if (initialSize <= 8 ) {
+        if (initialSize <= 8)
+        {
             roundedSize = 1;
-            while (roundedSize < initialSize) {
+            while (roundedSize < initialSize)
+            {
                 roundedSize <<= 1;
             }
-        } else {
+        } else
+        {
             roundedSize = (initialSize + 7) / 8 * 8;
         }
 
         return roundedSize;
     }
-    private static int computeInitialSampleSize(BitmapFactory.Options options,int minSideLength, int maxNumOfPixels) {
+
+    private static int computeInitialSampleSize(BitmapFactory.Options options, int minSideLength, int maxNumOfPixels)
+    {
         double w = options.outWidth;
         double h = options.outHeight;
 
@@ -102,17 +148,21 @@ public class BitmapHandler
                 (int) Math.min(Math.floor(w / minSideLength),
                         Math.floor(h / minSideLength));
 
-        if (upperBound < lowerBound) {
+        if (upperBound < lowerBound)
+        {
             // return the larger one when there is no overlapping zone.
             return lowerBound;
         }
 
         if ((maxNumOfPixels == -1) &&
-                (minSideLength == -1)) {
+                (minSideLength == -1))
+        {
             return 1;
-        } else if (minSideLength == -1) {
+        } else if (minSideLength == -1)
+        {
             return lowerBound;
-        } else {
+        } else
+        {
             return upperBound;
         }
     }
