@@ -10,13 +10,14 @@ public class BillBean
     private String name;
     private String dateInfo;
     private String descripInfo;
-    private byte[] picInfo;
-    private byte[] oldpicInfo;
     private String picadress;
     private String miniPicAddress = null;
 
     private String picString=null;
     private String oldpicString=null;
+    private String webUri=null;
+    private String miniWebUri=null;
+
     public String getOldpicString()
     {
         return oldpicString;
@@ -50,11 +51,9 @@ public class BillBean
     public BillBean(String dateInfo, byte[] picInfo, byte[] oldpicInfo,String descripInfo, String name, int money,String address)
     {
         this.dateInfo = dateInfo;
-        this.picInfo = picInfo;
         this.descripInfo = descripInfo;
         this.name = name;
         this.money = money;
-        this.oldpicInfo = oldpicInfo;
         this.picadress = address;
     }
 
@@ -82,15 +81,6 @@ public class BillBean
         this.descripInfo = descripInfo;
     }
 
-    public byte[] getPicInfo()
-    {
-        return picInfo;
-    }
-
-    public void setPicInfo(byte[] picInfo)
-    {
-        this.picInfo = picInfo;
-    }
     public String getName()
     {
         return name;
@@ -120,18 +110,10 @@ public class BillBean
                 + "  Money" + getMoneyString()
                 + " describe is " + descripInfo
                 + "  date info is" + dateInfo
-                +" pic info is"+picInfo
-                +" old pic info is "+oldpicInfo;
-    }
-    public byte[] getOldpicInfo()
-    {
-        return oldpicInfo;
+                +" picaddress is "+picadress
+                +" minipicaddress is "+miniPicAddress;
     }
 
-    public void setOldpicInfo(byte[] oldpicInfo)
-    {
-        this.oldpicInfo = oldpicInfo;
-    }
 
     public String getMiniPicAddress()
     {
@@ -141,5 +123,25 @@ public class BillBean
     public void setMiniPicAddress(String miniPicAddress)
     {
         this.miniPicAddress = miniPicAddress;
+    }
+
+    public String getWebUri()
+    {
+        return webUri;
+    }
+
+    public void setWebUri(String webUri)
+    {
+        this.webUri = webUri;
+    }
+
+    public String getMiniWebUri()
+    {
+        return miniWebUri;
+    }
+
+    public void setMiniWebUri(String miniWebUri)
+    {
+        this.miniWebUri = miniWebUri;
     }
 }

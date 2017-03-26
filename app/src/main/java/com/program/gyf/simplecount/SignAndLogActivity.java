@@ -18,7 +18,6 @@ import android.widget.TextView;
 import java.io.IOException;
 
 import cn.pedant.SweetAlert.SweetAlertDialog;
-import database.DBOpenHelper;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -235,8 +234,8 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
 
     private void playAndIntent(View view)
     {
-        DBOpenHelper dbHelper = new DBOpenHelper(this, "friends.db", null, 1,username);
-        dbHelper.getWritableDatabase();
+//        DBOpenHelper dbHelper = new DBOpenHelper(this, "friends.db", null, 1,username);
+//        dbHelper.getWritableDatabase();
         saveLogStatus();
         ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationY",-1000f);
         animator.setDuration(800);

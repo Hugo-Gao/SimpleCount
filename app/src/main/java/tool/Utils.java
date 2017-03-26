@@ -1,6 +1,7 @@
 package tool;
 
 import android.content.Context;
+import android.net.Uri;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -18,7 +19,7 @@ public class Utils
         final TextView txt = (TextView) view.findViewById(R.id.txt_item);
         txt.setText(item.getBillName());
         final ImageView img = (ImageView) view.findViewById(R.id.img_item);
-        img.setImageBitmap(BitmapHandler.convertByteToBitmap(item.getBillPic()));
+        img.setImageURI(Uri.parse(item.getBillPic()));
     }
 
 

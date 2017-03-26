@@ -2,6 +2,7 @@ package tool;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -60,7 +61,7 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
     public void onBindViewHolder(MyHolder holder, int position)
     {
         BillBean bean = beanList.get(position);
-        holder.picInfo.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
+        holder.picInfo.setImageURI(Uri.parse(bean.getMiniPicAddress()));
         holder.dateInfo.setText(bean.getDateInfo());
         holder.itemView.setTag(bean);
         holder.itemView.setTag(R.id.pic_address,holder.picInfo);

@@ -1,8 +1,11 @@
 package com.program.gyf.simplecount;
 
+import android.content.Context;
 import android.graphics.Bitmap;
+import android.net.Uri;
+import android.provider.MediaStore;
 
-import tool.BitmapHandler;
+import java.io.IOException;
 
 /**
  * Created by Administrator on 2017/1/18.
@@ -11,7 +14,7 @@ import tool.BitmapHandler;
 public class BillItem
 {
     private String billName;
-    private byte[] billPic;
+    private String picAddress;
 
     public String getBillName()
     {
@@ -23,21 +26,28 @@ public class BillItem
         this.billName = billName;
     }
 
-    public byte[] getBillPic()
+    public String getBillPic()
     {
 
-        return billPic;
+        return picAddress;
     }
 
-    public Bitmap getBillBitmapPic()
+    public Bitmap getBillBitmapPic(Context context)
     {
-        return BitmapHandler.convertByteToBitmap(billPic);
+        try
+        {
+            return MediaStore.Images.Media.getBitmap(context.getContentResolver(),Uri.parse(picAddress));
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 
 
-    public void setBillPic(byte[] billPic)
+    public void setBillPic(String billPic)
     {
-        this.billPic = billPic;
+        this.picAddress = billPic;
     }
 }

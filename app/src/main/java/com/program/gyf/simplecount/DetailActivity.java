@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -13,7 +14,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import database.DBOpenHelper;
-import tool.BitmapHandler;
 import tool.SharedPreferenceHelper;
 
 /**
@@ -79,12 +79,12 @@ public class DetailActivity extends Activity
         dbHelper = new DBOpenHelper(this, "BillData.db", null, 1, BillName);
         String beanInfo = intent.getStringExtra("TheBeanInfo");
         BillBean bean = SearchBeanByDateInfo(beanInfo);
-        if (bean.getOldpicInfo() != null)
+        if (bean.getPicadress() != null)
         {
-            oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getOldpicInfo()));
+            oldPicView.setImageURI(Uri.parse(bean.getPicadress()));
         } else
         {
-            oldPicView.setImageBitmap(BitmapHandler.convertByteToBitmap(bean.getPicInfo()));
+            oldPicView.setImageURI(Uri.parse(bean.getMiniPicAddress()));
         }
         describeText.setText(bean.getDescripInfo());
         nameText.setText(bean.getName());
@@ -133,17 +133,14 @@ public class DetailActivity extends Activity
                         case "descripe":
                             bean.setDescripInfo(cursor.getString(cursor.getColumnIndex(name)));
                             break;
-                        case "pic":
-                            bean.setPicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
-                            break;
                         case "date":
                             bean.setDateInfo(cursor.getString(cursor.getColumnIndex(name)));
                             break;
-                        case "oldpic":
-                            bean.setOldpicInfo(cursor.getBlob(cursor.getColumnIndex(name)));
-                            break;
                         case "picadress":
                             bean.setPicadress(cursor.getString(cursor.getColumnIndex(name)));
+                            break;
+                        case "minipicadress":
+                            bean.setMiniPicAddress(cursor.getString(cursor.getColumnIndex(name)));
                             break;
                     }
                 }

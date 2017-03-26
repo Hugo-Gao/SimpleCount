@@ -30,10 +30,11 @@ public class DBOpenHelper extends SQLiteOpenHelper
                 "name text not null," +
                 "money integer not null," +
                 "descripe text not null," +
-                "pic BLOB not null," +
                 "date text not null," +
-                "oldpic BLOB not null," +
-                "picadress text)");
+                "picadress text not null," +
+                "minipicadress text not null," +
+                "weburi text," +
+                "miniweburi text)");
         Log.d("haha", "创建了表" + TABLENAME);
 
     }
@@ -44,10 +45,11 @@ public class DBOpenHelper extends SQLiteOpenHelper
                 "name text not null," +
                 "money integer not null," +
                 "descripe text not null," +
-                "pic BLOB not null," +
                 "date text not null," +
-                "oldpic BLOB not null," +
-                "picadress text)");
+                "picadress text not null," +
+                "minipicadress text not null," +
+                "weburi text," +
+                "miniweburi text)");
         Log.d("haha", "创建了表" + TABLENAME);
     }
 

@@ -80,7 +80,7 @@ public class BillListActivity extends Activity
         blurImage = (ImageView) findViewById(R.id.blur_pic);
         itemList = getItemList();
         blurAllBmp();
-        blurImage.setImageBitmap(BitmapHandler.blur(this, itemList.get(0).getBillBitmapPic()));
+        blurImage.setImageBitmap(BitmapHandler.blur(this, itemList.get(0).getBillBitmapPic(this)));
         final HorizontalInfiniteCycleViewPager infiniteCycleViewPager =
                 (HorizontalInfiniteCycleViewPager) findViewById(R.id.hicvp);
         final HorizontalPagerAdapter adapter = new HorizontalPagerAdapter(itemList, this);
@@ -125,7 +125,7 @@ public class BillListActivity extends Activity
     {
         for (BillItem item : itemList)
         {
-            blurList.add(BitmapHandler.blur(this, item.getBillBitmapPic()));
+            blurList.add(BitmapHandler.blur(this, item.getBillBitmapPic(this)));
         }
     }
 
@@ -147,7 +147,7 @@ public class BillListActivity extends Activity
         {
             String name = cursor.getString(cursor.getColumnIndex("tableName"));
             Log.d("haha", "账本名为" + name);
-            byte[] picInfo = getOnePicFromBill(name);
+            String picInfo = getOnePicFromBill(name);
             BillItem item = new BillItem();
             item.setBillName(name);
             item.setBillPic(picInfo);
@@ -158,15 +158,15 @@ public class BillListActivity extends Activity
         return list;
     }
 
-    private byte[] getOnePicFromBill(String name)
+    private String getOnePicFromBill(String name)
     {
-        byte[] picInfo = null;
+        String picInfo = null;
         dbHelper = new DBOpenHelper(BillListActivity.this, "BillData.db", null, 1, name);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         Cursor cursor = db.query(name, null, "_id = ?", new String[]{"1"}, null, null, null);
         while (cursor.moveToNext())
         {
-            picInfo = cursor.getBlob(cursor.getColumnIndex("oldpic"));
+            picInfo = cursor.getString(cursor.getColumnIndex("picadress"));
         }
         return picInfo;
     }
