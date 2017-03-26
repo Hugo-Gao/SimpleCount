@@ -26,6 +26,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import static tool.ServerIP.LOGURL;
+import static tool.ServerIP.SIGNURL;
+
 
 /**
  * Created by Administrator on 2016/12/25.
@@ -72,11 +75,11 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
         switch (v.getId())
         {
             case R.id.log_Button:
-                String url = "http://192.168.253.1:8070/user";/*在此处改变你的服务器地址*/
+                String url = LOGURL;/*在此处改变你的服务器地址*/
                 getCheckFromServer(url,userName,passWord);
                 break;
             case R.id.Sign_Button:
-                String url2 = "http://192.168.253.1:8070/register";/*在此处改变你的服务器地址*/
+                String url2 = SIGNURL;/*在此处改变你的服务器地址*/
                 registeNameWordToServer(url2,userName,passWord);
                 break;
         }

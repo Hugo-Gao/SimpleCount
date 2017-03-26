@@ -13,6 +13,29 @@ public class BillBean
     private byte[] picInfo;
     private byte[] oldpicInfo;
     private String picadress;
+    private String miniPicAddress = null;
+
+    private String picString=null;
+    private String oldpicString=null;
+    public String getOldpicString()
+    {
+        return oldpicString;
+    }
+
+    public void setOldpicString(String oldpicString)
+    {
+        this.oldpicString = oldpicString;
+    }
+
+    public String getPicString()
+    {
+        return picString;
+    }
+
+    public void setPicString(String picString)
+    {
+        this.picString = picString;
+    }
 
     public String getPicadress()
     {
@@ -108,5 +131,15 @@ public class BillBean
     public void setOldpicInfo(byte[] oldpicInfo)
     {
         this.oldpicInfo = oldpicInfo;
+    }
+
+    public String getMiniPicAddress()
+    {
+        return miniPicAddress;
+    }
+
+    public void setMiniPicAddress(String miniPicAddress)
+    {
+        this.miniPicAddress = miniPicAddress;
     }
 }

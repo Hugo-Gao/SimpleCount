@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import View.SlidingMenu;
 import cn.pedant.SweetAlert.SweetAlertDialog;
@@ -60,7 +61,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okio.ByteString;
-import tool.AcivityHelper;
 import tool.BitmapHandler;
 import tool.CardViewAdapter;
 import tool.ItemAnimition;
@@ -69,6 +69,14 @@ import tool.WonderfulDialog;
 
 import static android.content.ContentValues.TAG;
 import static tool.AcivityHelper.finishThisActivity;
+import static tool.ImageUtil.SAVEMINI;
+import static tool.ImageUtil.SAVENOR;
+import static tool.ImageUtil.saveBitmapToSD;
+import static tool.ServerIP.GETBILLSNAMEURL;
+import static tool.ServerIP.GETDATAURL;
+import static tool.ServerIP.POSTBILLNAMEURL;
+import static tool.ServerIP.POSTURL;
+import static tool.ServerIP.TESTURL;
 import static tool.SharedPreferenceHelper.SaveNameToSharedPreference;
 import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
@@ -97,6 +105,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
     private static final int CROP_PHOTO2 = 4;
+    public final static int CONNECT_TIMEOUT =1000;
+    public final static int READ_TIMEOUT=1000;
+    public final static int WRITE_TIMEOUT=1000;
     private static String SharedPreferenceName;
     private final String PHOTO_PATH = Environment.getExternalStorageDirectory() + "/ASimpleCount/";
     private Uri imageUri;
@@ -106,11 +117,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private Uri imgUri;
     private int i;
     private Toolbar toolbar;
-    private final String postDataUri = "http://192.168.253.1:8070/postdata";
-    private final String getBillsNameUri = "http://192.168.253.1:8070/getbillsname";
-    private final String postBillNameListUri = "http://192.168.253.1:8070/postBillList";
-    private final String getDataUri = "http://192.168.253.1:8070/getdata";
-    private final String testUri = "http://192.168.253.1:8070";
+    private final String postDataUri = POSTURL;
+    private final String getBillsNameUri = GETBILLSNAMEURL;
+    private final String postBillNameListUri = POSTBILLNAMEURL;
+    private final String getDataUri = GETDATAURL;
+    private final String testUri = TESTURL;
     private TextView titleText;
     private Button finish_btn;
     private TextView viewAllBillText;
@@ -123,7 +134,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         super.onStop();
         if (isdisappear)
         {
-            AcivityHelper.finishThisActivity(this);
+            finishThisActivity(this);
         } else
         {
             isdisappear = true;
@@ -134,35 +145,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        createPathIfNotExits(PHOTO_PATH);
-        Intent intent = getIntent();
-        refreshFinish = false;
-        if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
-        {
-            saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
-        } else
-        {
-            Log.d("haha", "没有传入数据");
-        }
-        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
-        Log.d("haha", "用户名" + USERNAME);
-        SharedPreferenceName = USERNAME;
-
-
-        tableNameDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
-        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
-        tableNameDBHelper.create(db);
-        db.close();
-        Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
-
-        titleText = (TextView) findViewById(R.id.title);
-        titleText.setTypeface(titleFont);
-        titleText.setText("");
-        if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
-        {
-            titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-        }
-
         finish_btn = (Button) findViewById(R.id.finish_bill);
         finish_btn.setOnClickListener(this);
         viewAllBillText = (TextView) findViewById(R.id.view_all_bills);
@@ -188,6 +170,35 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
         });
         toolbar = (Toolbar) findViewById(R.id.toolbar);
+        createPathIfNotExits(PHOTO_PATH);
+        Intent intent = getIntent();
+        refreshFinish = false;
+        Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
+        titleText = (TextView) findViewById(R.id.title);
+        titleText.setTypeface(titleFont);
+        titleText.setText("");
+        if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
+        {
+            saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
+            showRecyclerView();
+        } else
+        {
+            Log.d("haha", "没有从ACtiviyi传入数据");
+        }
+        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
+        Log.d("haha", "用户名" + USERNAME);
+        SharedPreferenceName = USERNAME;
+        tableNameDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
+        SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        tableNameDBHelper.create(db);
+        db.close();
+
+        if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
+        {
+            titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        }
+
+
         if (checkFirstLog())
         {
             getBeanFromServer();
@@ -195,13 +206,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         if (SharedPreferenceHelper.getNameFromSharedPreferences(this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this)).size() == 0)
         {
             showMateriaDialog();
+        } else
+        {
+            showRecyclerView();
         }
-        showRecyclerView();
     }
 
     private boolean checkFirstLog()
     {
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
+        Log.d("haha", "用户在本机第一次登录");
         Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
         if (cursor.getCount() == 0)
         {
@@ -237,7 +251,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     for (int i = 0; i < size; i++)
                     {
-                        OkHttpClient client = new OkHttpClient();
+                        OkHttpClient mOkHttpClient =
+                                new OkHttpClient.Builder()
+                                        .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                                        .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                                        .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                                        .build();
                         final int count2 = i + 1;
                         FormBody.Builder formBuilder = new FormBody.Builder();
                         formBuilder.add("username", USERNAME);//USERNAME就是username
@@ -247,12 +266,17 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         formBuilder.add("describe", beanitemList.get(i).getDescripInfo());
                         formBuilder.add("date", beanitemList.get(i).getDateInfo());
                         long startTime = System.currentTimeMillis();
-                        formBuilder.add("picinfo", Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT));
-                        formBuilder.add("oldpicinfo", Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT));
+                        String picString = Base64.encodeToString(beanitemList.get(i).getPicInfo(), Base64.DEFAULT);
+                        String oldpicString = Base64.encodeToString(beanitemList.get(i).getOldpicInfo(), Base64.DEFAULT);
                         long endTime = System.currentTimeMillis();
                         Log.d("timelog", "billname is " + billName + " 第" + i + "条" + " 的图片转换时间为" + String.valueOf(endTime - startTime));
+                        startTime = System.currentTimeMillis();
+                        formBuilder.add("picinfo", picString);
+                        formBuilder.add("oldpicinfo", oldpicString);
+                        endTime = System.currentTimeMillis();
+                        Log.d("timelog", "billname is " + billName + " 第" + i + "条" + " 的图片装载时间为" + String.valueOf(endTime - startTime));
                         Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
-                        Call call = client.newCall(request);
+                        Call call = mOkHttpClient.newCall(request);
                         call.enqueue(new Callback()
                         {
                             @Override
@@ -308,7 +332,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void checkServerConnect()
     {
         final boolean[] isConnect = {false};
-        OkHttpClient okHttpClient = new OkHttpClient();
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
         Request request = new Request.Builder().url(testUri).build();
         Call call = okHttpClient.newCall(request);
         call.enqueue(new Callback()
@@ -355,7 +383,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         final int[] count = {0};
         for (final String billName : billNameList)
         {
-            OkHttpClient client = new OkHttpClient();
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                    .build();
             String touristsString = getNameStringFromSharedPreferences(this, UserName, billName);
             FormBody.Builder formBuilder = new FormBody.Builder();
             formBuilder.add("billName", billName);
@@ -466,16 +498,17 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
 
-    /**
-     * 此方法要重写!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     */
     private void getBeanFromServer()
     {
         final SweetAlertDialog pDialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.PROGRESS_TYPE);
         pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
         pDialog.setTitleText("正在从服务器端获取数据");
         pDialog.show();
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
         FormBody.Builder formBuilder = new FormBody.Builder();
         formBuilder.add("username", USERNAME);
         Request request = new Request.Builder().url(getBillsNameUri).post(formBuilder.build()).build();
@@ -566,7 +599,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         final int[] count = {0};
         for (final String billName : billsName)
         {
-            OkHttpClient client = new OkHttpClient();
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                    .build();
             FormBody.Builder formBuilder = new FormBody.Builder();
             formBuilder.add("username", USERNAME);
             formBuilder.add("billname", billName);
@@ -596,6 +633,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 @Override
                 public void onResponse(Call call, Response response) throws IOException
                 {
+                    int startTime = (int) System.currentTimeMillis();
+                    Log.d("timelog", "开始获取");
                     String JSONString = response.body().string();
                     if (JSONString.equals("没有数据"))
                     {
@@ -626,7 +665,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             bean.setPicInfo(ByteString.decodeBase64(beanObject.getString("pic")).toByteArray());
                             bean.setOldpicInfo(ByteString.decodeBase64(beanObject.getString("oldpic")).toByteArray());
                             saveBeanToDataBase(billName, bean);
-
+                            int endTime = (int) System.currentTimeMillis();
+                            Log.d("timelog", "获取" + bean.getDescripInfo() + "的时间为" + (endTime - startTime));
                         }
                         count[0]++;
                         if (count[0] == billsName.size())
@@ -641,11 +681,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                     pDialog.show();
                                     saveRealBillNameToSharedPreferences(AverageBillActivity.this, billsName.get(0));
                                     showRecyclerView();
-                                }
+                                 }
                             });
                         } else
                         {
-                            Log.d("haha", "count 为" + count[0]);
+                            Log.d("haha", "count 为" + count[0] + "，共有" + billsName.size());
                         }
                     } catch (JSONException e)
                     {
@@ -801,10 +841,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         //按钮旋转并消失
         ItemAnimition.rotationAndGone(addBillButton);
-        InputDescripe();
+        InputDescribe();
     }
 
-    private void InputDescripe()//在对话框里输入账单信息
+    private void InputDescribe()//在对话框里输入账单信息
     {
         isdisappear = false;
         final WonderfulDialog materialDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.bill_descripe_layout, 300, 300);
@@ -873,7 +913,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         public void onClick(View v)
                         {
                             String photoName = bean.getDateInfo() + "_image.jpg";
-                            Log.d("haha", "photoName is " + photoName);
+                            Log.d("haha", "miniphotoName is " + photoName);
                             outputImage = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/", photoName);
                             try
                             {
@@ -910,23 +950,23 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         @Override
                         public void onClick(View v)
                         {
-                            String photoName = bean.getDateInfo() + "_image.jpg";
-                            outputImage = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/", photoName);
-                            try
-                            {
-                                if (outputImage.exists())
-                                {
-                                    outputImage.delete();
-                                }
-                                outputImage.createNewFile();
-                            } catch (IOException e)
-                            {
-                                e.printStackTrace();
-                            }
-                            imageUri = Uri.fromFile(outputImage);//将文件路径转化为Uri对象
+//                            String photoName = bean.getDateInfo() + "_image.jpg";
+//                            outputImage = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/", photoName);
+//                            try
+//                            {
+//                                if (outputImage.exists())
+//                                {
+//                                    outputImage.delete();
+//                                }
+//                                outputImage.createNewFile();
+//                            } catch (IOException e)
+//                            {
+//                                e.printStackTrace();
+//                            }
+//                            imageUri = Uri.fromFile(outputImage);//将文件路径转化为Uri对象
                             Intent intent = new Intent(Intent.ACTION_PICK);
                             intent.setType("image/*");
-                            intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
+//                            intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                             intent.putExtra("name", bean.getName());
                             startActivityForResult(intent, CHOOSE_PHOTO);
                             wonderfulDialog.dismiss();
@@ -972,7 +1012,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         switch (requestCode)
         {
             case TAKE_PHOTO:
-                Bitmap bitmap = null;
+                Bitmap bitmap;
                 if (resultCode == RESULT_OK)
                 {
                     Intent intent = new Intent("com.android.camera.action.CROP");
@@ -982,8 +1022,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     intent.putExtra("aspectY", 3);//裁切的高比例
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                     bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f, 816.0f);//保存原图
+                    saveBitmapToSD(bitmap,bean,SAVENOR);
                     bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
-                    bean.setPicadress(imageUri.toString());
+                    bean.setMiniPicAddress(imageUri.toString());//裁剪图片的 uri
+                    Log.d("haha", "图片Uri是" + bean.getPicadress());
                     startActivityForResult(intent, CROP_PHOTO);
                 }
                 break;
@@ -1004,7 +1046,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 intent.setDataAndType(imgUri, "image/*");
                 bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);//保存原图
                 bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(bitmap));
-                bean.setPicadress(imgUri.toString());
+                try
+                {
+                    saveBitmapToSD(MediaStore.Images.Media.getBitmap(getContentResolver(), imgUri),bean,SAVENOR);
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
                 intent.putExtra("scale", true);
                 intent.putExtra("aspectX", 4);//裁切的宽比例
                 intent.putExtra("aspectY", 3);//裁切的高比例
@@ -1015,6 +1063,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 if (resultCode == RESULT_OK)
                 {
                     bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);
+                    saveBitmapToSD(bitmap,bean,SAVEMINI);
                     bean.setPicInfo(BitmapHandler.convertBitmapToByte(bitmap));
                 }
                 addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -1054,7 +1103,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Log.d("haha", "成功存入" + bean.toString());
         values.clear();
         db.close();
-
     }
 
 
@@ -1122,7 +1170,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                         String billName = editText.getText().toString();
                                         saveRealBillNameToSharedPreferences(AverageBillActivity.this, billName);
                                         saveBillNameToDB(billName);
-                                        SharedPreferenceHelper.SaveNameToSharedPreference(AverageBillActivity.this
+                                        SaveNameToSharedPreference(AverageBillActivity.this
                                                 , nameString, SharedPreferenceName, billName);
                                         materialDialog.dismiss();
                                         titleText.setText(billName);
@@ -1177,7 +1225,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("date", bean.getDateInfo());
         values.put("picadress", bean.getPicadress());
         db.insert(BillName, null, values);
-        Log.d("haha", "成功存入" + bean.toString());
+        Log.d("haha", "成功存入" + bean.toString() + "的完整数据");
         values.clear();
         db.close();
 

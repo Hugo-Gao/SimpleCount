@@ -91,7 +91,7 @@ public class FileUtil
         return result;
     }
 
-    static String getRealPathFromURI(Context context, Uri contentUri) {
+    public static String getRealPathFromURI(Context context, Uri contentUri) {
         Cursor cursor = context.getContentResolver().query(contentUri, null, null, null, null);
         if (cursor == null) {
             return contentUri.getPath();
