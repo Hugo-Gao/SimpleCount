@@ -93,4 +93,18 @@ public class SharedPreferenceHelper
         String username = preference.getString("username", "");
         return username;
     }
+
+    public static boolean isLogging(Context context)
+    {
+        SharedPreferences sp = context.getSharedPreferences("userLogStatus", MODE_PRIVATE);
+        return sp.getBoolean("LogStatus", false);
+    }
+
+    public static void  setLoggingStatus(Context context,boolean status)
+    {
+        SharedPreferences sharedPreferences = context.getSharedPreferences("userLogStatus", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean("LogStatus", status);
+        editor.apply();
+    }
 }

@@ -76,7 +76,6 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
     {
         beanList.add(position, bean);
         notifyItemInserted(position);
-
     }
     public void deleteItem(int position)
     {

@@ -27,7 +27,7 @@ import okhttp3.Response;
 
 import static tool.ServerIP.LOGURL;
 import static tool.ServerIP.SIGNURL;
-
+import static tool.SharedPreferenceHelper.setLoggingStatus;
 
 /**
  * Created by Administrator on 2016/12/25.
@@ -236,7 +236,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
     {
 //        DBOpenHelper dbHelper = new DBOpenHelper(this, "friends.db", null, 1,username);
 //        dbHelper.getWritableDatabase();
-        saveLogStatus();
+        setLoggingStatus(this,true);
         ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationY",-1000f);
         animator.setDuration(800);
         animator.addListener(new AnimatorListenerAdapter()

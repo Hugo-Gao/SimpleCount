@@ -21,7 +21,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
@@ -39,6 +39,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.lcodecore.tkrefreshlayout.RefreshListenerAdapter;
+import com.lcodecore.tkrefreshlayout.TwinklingRefreshLayout;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
@@ -86,7 +88,7 @@ import static tool.SharedPreferenceHelper.SaveNameToSharedPreference;
 import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
 import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
-
+import static tool.SharedPreferenceHelper.setLoggingStatus;
 /**
  * 主界面Activity
  */
@@ -101,7 +103,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private TableListDBHelper tableNameDBHelper;
     private List<BillBean> beanList = new ArrayList<>();
     private RecyclerView recyclerView;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private TwinklingRefreshLayout swipeRefreshLayout;
     private CardViewAdapter adapter;
     private RecyclerView.LayoutManager layoutManager;
     private EditText moneyEditText;//创建账单中的金额输入框
@@ -132,29 +134,34 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private Button finish_btn;
     private TextView viewAllBillText;
     private boolean refreshFinish;
-    private boolean isdisappear = true;
-    private static final int FINISHREFRESH=1;
-    Handler myHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
+    private boolean isdisappear = false;
+    private static final int FINISHREFRESH = 1;
+    Handler myHandler = new Handler()
+    {
+        public void handleMessage(Message msg)
+        {
+            switch (msg.what)
+            {
                 case FINISHREFRESH:
-                    swipeRefreshLayout.setRefreshing(false);
-                    Snackbar.make(swipeRefreshLayout,"同步完成",Snackbar.LENGTH_SHORT).show();
+                    swipeRefreshLayout.finishRefreshing();
+                    Snackbar.make(swipeRefreshLayout, "同步完成", Snackbar.LENGTH_SHORT).show();
                     break;
             }
             super.handleMessage(msg);
         }
     };
+
     @Override
     protected void onStop()
     {
+        Log.d("haha", "进入onStop方法");
         super.onStop();
         if (isdisappear)
         {
             finishThisActivity(this);
         } else
         {
-            isdisappear = true;
+            isdisappear = false;
         }
     }
 
@@ -176,16 +183,26 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         returnLogButton.setOnClickListener(this);
         settlementButton.setOnClickListener(this);
         recyclerView = (RecyclerView) findViewById(R.id.recycle_view);
-        swipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_layout);
-        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener()
+        swipeRefreshLayout = (TwinklingRefreshLayout) findViewById(R.id.swipe_layout);
+        swipeRefreshLayout.setOnRefreshListener(new RefreshListenerAdapter()
         {
             @Override
-            public void onRefresh()
+            public void onRefresh(TwinklingRefreshLayout refreshLayout)
             {
-                swipeRefreshLayout.setRefreshing(true);
+                super.onRefresh(refreshLayout);
                 postToRemoteDB();
             }
         });
+
+        File appDir = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/");
+        if (!appDir.exists())
+        {
+            appDir.mkdir();
+            Log.d("haha", "不存在路径,创建一个");
+        } else
+        {
+            Log.d("haha", "存在路径");
+        }
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         createPathIfNotExits(PHOTO_PATH);
         Intent intent = getIntent();
@@ -250,7 +267,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void postToRemoteDB()
     {
-
+        Log.d("haha", "开始传送到服务器");
         checkServerConnect();
         List<String> billNameList = getBillList();//获取所有账单名称
         postBillNameListToDB(billNameList, USERNAME);//此处将所有账单名称传送到服务器
@@ -286,8 +303,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
                         if (beanitemList.get(i).getWebUri() == null)//上传原图
                         {
+                            Log.d("haha", "向SM图床获取地址");
                             String webUri = getWebUriFromSM(beanitemList.get(i).getPicadress());
-                            while(webUri==null)
+                            while (webUri == null)
                             {
                                 try
                                 {
@@ -303,13 +321,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         if (beanitemList.get(i).getMiniWebUri() == null)
                         {
                             String miniWebUri = getWebUriFromSM(beanitemList.get(i).getMiniPicAddress());
-                            while(miniWebUri==null)
+                            while (miniWebUri == null)
                             {
 
                             }
                             beanitemList.get(i).setMiniWebUri(miniWebUri);
                         }
-                        saveWebInfoToDataBase(billName,  beanitemList.get(i));
+                        saveWebInfoToDataBase(billName, beanitemList.get(i));
                         formBuilder.add("minipicuri", beanitemList.get(i).getMiniWebUri());
                         Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
                         Call call = mOkHttpClient.newCall(request);
@@ -327,11 +345,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
                                 String responseString = response.body().string();
                                 count[0]++;
-                                Log.d("haha","当前同步完成" + count[0] + "个条目");
+                                Log.d("haha", "当前同步完成" + count[0] + "个条目");
                                 if (count[0] == sumOfAllitems)
                                 {
                                     Message message = new Message();
-                                    message.what=FINISHREFRESH;
+                                    message.what = FINISHREFRESH;
                                     myHandler.sendMessage(message);
                                 }
 
@@ -354,7 +372,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Uri uri = Uri.parse(picadress);
         File file = new File(uri.getPath());
         final String[] webUri = new String[1];
-        String SMUrl="https://sm.ms/api/upload";
+        String SMUrl = "https://sm.ms/api/upload";
 
         RequestBody requestFile =    // 根据文件格式封装文件
                 RequestBody.create(MediaType.parse(MULTIPART_FORM_DATA), file);
@@ -369,23 +387,25 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 .build();
 
         final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
-        OkHttpClient okHttpClient  = httpBuilder
+        OkHttpClient okHttpClient = httpBuilder
                 //设置超时
                 .connectTimeout(100, TimeUnit.SECONDS)
                 .writeTimeout(150, TimeUnit.SECONDS)
                 .build();
-        okHttpClient.newCall(request).enqueue(new Callback() {
+        okHttpClient.newCall(request).enqueue(new Callback()
+        {
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String responseString=response.body().string();
-                Log.d("SM",responseString);
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String responseString = response.body().string();
+                Log.d("SM", responseString);
                 try
                 {
                     JSONObject jsonObject = new JSONObject(responseString);
-                    JSONObject dataObj=jsonObject.getJSONObject("data");
-                    webUri[0] =dataObj.getString("url");
-                    Log.d("SM","取出weburi地址"+webUri[0]);
+                    JSONObject dataObj = jsonObject.getJSONObject("data");
+                    webUri[0] = dataObj.getString("url");
+                    Log.d("SM", "取出weburi地址" + webUri[0]);
                 } catch (JSONException e)
                 {
                     e.printStackTrace();
@@ -393,14 +413,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
 
             @Override
-            public void onFailure(Call arg0, IOException e) {
+            public void onFailure(Call arg0, IOException e)
+            {
                 // TODO Auto-generated method stub
-                Log.d("SM",e.toString());
+                Log.d("SM", e.toString());
             }
 
         });
 
-        while(webUri[0] ==null)
+        while (webUri[0] == null)
         {
 
         }
@@ -408,7 +429,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
     public static File getFilePathFromContentUri(Uri selectedVideoUri,
-                                                   ContentResolver contentResolver)
+                                                 ContentResolver contentResolver)
     {
         String filePath;
         String[] filePathColumn = {MediaStore.MediaColumns.DATA};
@@ -424,6 +445,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         cursor.close();
         return new File(filePath);
     }
+
     private void checkServerConnect()
     {
         final boolean[] isConnect = {false};
@@ -444,7 +466,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     @Override
                     public void run()
                     {
-                        swipeRefreshLayout.setRefreshing(false);
+                        swipeRefreshLayout.finishRefreshing();
                         Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -462,7 +484,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         @Override
                         public void run()
                         {
-                            swipeRefreshLayout.setRefreshing(false);
+                            swipeRefreshLayout.finishRefreshing();
                             Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
                         }
                     });
@@ -518,6 +540,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     }
 
+
+    /**
+     * @return 返回该用户所有账单List
+     */
     private List<String> getBillList()
     {
         List<String> list = new ArrayList<>();
@@ -533,6 +559,24 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         db.close();
         return list;
     }
+
+    /**
+     * 判断数据是否发生变化，如果adapter已经绑定则通知adapter更新，否则调用无参showRecyclerView()
+     *
+     * @param dataChange
+     */
+    private void showRecyclerView(boolean dataChange)
+    {
+        if (dataChange && adapter != null)
+        {
+            adapter.addItem(beanList.size() - 1, bean);
+            recyclerView.scrollToPosition(beanList.size() - 1);
+        } else
+        {
+            showRecyclerView();
+        }
+    }
+
 
     private void showRecyclerView()
     {
@@ -555,6 +599,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 }
             });
             recyclerView.setAdapter(adapter);
+            recyclerView.setItemAnimator(new DefaultItemAnimator());
             recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
             {
                 @Override
@@ -760,8 +805,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             bean.setDescripInfo(beanObject.getString("describe"));
                             bean.setWebUri(beanObject.getString("picuri"));
                             bean.setMiniWebUri(beanObject.getString("minipicuri"));
-                            Bitmap webBmp= Picasso.with(AverageBillActivity.this).load(bean.getWebUri()).get();
-                            Bitmap miniWebBmp= Picasso.with(AverageBillActivity.this).load(bean.getMiniWebUri()).get();
+                            Bitmap webBmp = Picasso.with(AverageBillActivity.this).load(bean.getWebUri()).get();
+                            Bitmap miniWebBmp = Picasso.with(AverageBillActivity.this).load(bean.getMiniWebUri()).get();
                             //bean.setPicInfo(BitmapHandler.convertBitmapToByte(miniWebBmp));
                             //bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(webBmp));
 
@@ -862,6 +907,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         {
                             confirmReturnDialog.dismiss();
                             saveRealBillNameToSharedPreferences(AverageBillActivity.this, "");
+                            setLoggingStatus(AverageBillActivity.this, false);
                             Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
                             startActivity(intent);
                             AverageBillActivity.this.finish();
@@ -920,8 +966,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 mMenu.toggleMenu();
                 break;
             case R.id.view_all_bills:
-                intentToBillListActivity();
-                mMenu.toggleMenu();
+                if (getBillList().size() > 0)
+                {
+                    intentToBillListActivity();
+                    mMenu.toggleMenu();
+                }
+                else
+                {
+                    SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
+                    dialog.setTitleText("您还没有账单，请先添加账单");
+                    dialog.setCancelable(true);
+                    dialog.show();
+                }
                 break;
         }
     }
@@ -1179,7 +1235,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         saveBeanToDataBase(billName);
         Log.d("haha", "在addcard方法中" + bean.toString());
-        showRecyclerView();
+        showRecyclerView(true);
     }
 
     /**
@@ -1318,7 +1374,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         return true;
     }
 
-    private void saveWebInfoToDataBase(String BillName,BillBean bean)
+    private void saveWebInfoToDataBase(String BillName, BillBean bean)
     {
         dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -1332,7 +1388,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         db.close();
     }
 
-    private  void saveBeanToDataBase(String BillName, BillBean bean)
+    private void saveBeanToDataBase(String BillName, BillBean bean)
     {
 //        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
 //        SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -1365,7 +1421,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("weburi", bean.getWebUri());
         values.put("miniweburi", bean.getMiniWebUri());
         db.insert(BillName, null, values);
-        Log.d("haha", BillName+"成功存入" + bean.toString() + "的完整数据");
+        Log.d("haha", BillName + "成功存入" + bean.toString() + "的完整数据");
         values.clear();
         db.close();
     }

@@ -46,6 +46,11 @@ public class ImageUtil
         File appDir = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/");
         if (!appDir.exists()) {
             appDir.mkdir();
+            Log.d("haha","不存在路径,创建一个");
+        }else
+        {
+            Log.d("haha","存在路径");
+
         }
         String photoName;
         if(way==SAVENOR)

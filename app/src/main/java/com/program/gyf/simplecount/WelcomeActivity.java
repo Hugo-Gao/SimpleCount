@@ -3,11 +3,12 @@ package com.program.gyf.simplecount;
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.TextView;
+
+import static tool.SharedPreferenceHelper.isLogging;
 
 /**
  * Created by Administrator on 2016/9/27.
@@ -27,8 +28,7 @@ public class WelcomeActivity extends Activity
         Title.setTypeface(typeface);
         new Handler().postDelayed(new Runnable() {
             public void run() {
-                SharedPreferences sp = getSharedPreferences("userLogStatus", MODE_PRIVATE);
-                if(sp.getBoolean("LogStatus",false))//检验用户是否已经登陆了
+                if(isLogging(WelcomeActivity.this))//检验用户是否已经登陆了
                 {
                     Intent intent = new Intent(WelcomeActivity.this, AverageBillActivity.class);
                     startActivity(intent);
