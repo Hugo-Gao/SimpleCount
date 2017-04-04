@@ -777,6 +777,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     Log.d("timelog", "开始获取");
                     String JSONString = response.body().string();
+                    /**
+                     * 客户端返回认为这是新用户
+                     */
                     if (JSONString.equals("没有数据"))
                     {
                         runOnUiThread(new Runnable()
@@ -791,50 +794,67 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         });
                         return;
                     }
+                    /**
+                     * 客户端返回新数据
+                     */
                     try
                     {
-                        JSONObject object = new JSONObject(JSONString);
+                        final JSONObject object = new JSONObject(JSONString);
+                        final int[] sumOfEachBillBean = {object.length()};//每个账单中的bean数量
+                        final int[] countOfEachBillBean = {0};//计算账单中已完成的bean数量
                         for (int i = 1; i <= object.length(); i++)
                         {
-                            JSONObject beanObject = object.getJSONObject(String.valueOf(i));
-                            Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
-                            BillBean bean = new BillBean();
-                            bean.setName(beanObject.getString("name"));
-                            bean.setDateInfo(beanObject.getString("date"));
-                            bean.setMoney(beanObject.getInt("money"));
-                            bean.setDescripInfo(beanObject.getString("describe"));
-                            bean.setWebUri(beanObject.getString("picuri"));
-                            bean.setMiniWebUri(beanObject.getString("minipicuri"));
-                            Bitmap webBmp = Picasso.with(AverageBillActivity.this).load(bean.getWebUri()).get();
-                            Bitmap miniWebBmp = Picasso.with(AverageBillActivity.this).load(bean.getMiniWebUri()).get();
-                            //bean.setPicInfo(BitmapHandler.convertBitmapToByte(miniWebBmp));
-                            //bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(webBmp));
-
-                            //bean.setPicInfo(BitmapHandler.convertBitmapToByte(((BitmapDrawable) getResources().getDrawable(R.drawable.ic_launcher)).getBitmap()));
-                            //bean.setOldpicInfo(BitmapHandler.convertBitmapToByte(((BitmapDrawable) getResources().getDrawable(R.drawable.ic_launcher)).getBitmap()));
-
-                            saveBitmapToSD(webBmp, bean, SAVENOR);
-                            saveBitmapToSD(miniWebBmp, bean, SAVEMINI);
-                            saveBeanToDataBase(billName, bean);
-                        }
-                        count[0]++;
-                        if (count[0] == billsName.size())
-                        {
-                            runOnUiThread(new Runnable()
+                            final int finalI = i;
+                            //子线程内
+                            Thread thread=new Thread(new Runnable()
                             {
                                 @Override
                                 public void run()
                                 {
-                                    pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
-                                    pDialog.setTitleText("获取数据成功");
-                                    pDialog.show();
-                                    saveRealBillNameToSharedPreferences(AverageBillActivity.this, billsName.get(0));
-                                    showRecyclerView();
+                                    JSONObject beanObject = null;
+                                    try
+                                    {
+                                        beanObject = object.getJSONObject(String.valueOf(finalI));
+                                        Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
+                                        BillBean bean=handleJsonToBean(beanObject);
+                                        saveBeanToDataBase(billName, bean);
+                                        countOfEachBillBean[0]++;
+                                        if(countOfEachBillBean[0]==sumOfEachBillBean[0])
+                                        {
+                                            count[0]++;
+                                            if(count[0]==billsName.size())
+                                            {
+                                                runOnUiThread(new Runnable()
+                                                {
+                                                    @Override
+                                                    public void run()
+                                                    {
+                                                        pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                                                        pDialog.setTitleText("获取数据成功");
+                                                        pDialog.show();
+                                                        saveRealBillNameToSharedPreferences(AverageBillActivity.this, billsName.get(0));
+                                                        showRecyclerView();
+                                                    }
+                                                });
+                                            }else
+                                            {
+                                                Log.d("haha", "count 为" + count[0] + "，共有" + billsName.size());
+                                            }
+                                        }else
+                                        {
+                                            Log.d("haha", billName+"的countOfEachBillBean 为" +countOfEachBillBean[0] + "，共有" + sumOfEachBillBean[0]);
+                                        }
+                                    } catch (JSONException e)
+                                    {
+                                        e.printStackTrace();
+                                    } catch (IOException e)
+                                    {
+                                        e.printStackTrace();
+                                    }
                                 }
                             });
-                        } else
-                        {
-                            Log.d("haha", "count 为" + count[0] + "，共有" + billsName.size());
+                            thread.start();
+                            //子线程外
                         }
                     } catch (JSONException e)
                     {
@@ -846,6 +866,22 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             });
         }
 
+    }
+
+    private BillBean handleJsonToBean(JSONObject beanObject) throws JSONException, IOException
+    {
+        BillBean bean = new BillBean();
+        bean.setName(beanObject.getString("name"));
+        bean.setDateInfo(beanObject.getString("date"));
+        bean.setMoney(beanObject.getInt("money"));
+        bean.setDescripInfo(beanObject.getString("describe"));
+        bean.setWebUri(beanObject.getString("picuri"));
+        bean.setMiniWebUri(beanObject.getString("minipicuri"));
+        Bitmap webBmp = Picasso.with(AverageBillActivity.this).load(bean.getWebUri()).get();
+        Bitmap miniWebBmp = Picasso.with(AverageBillActivity.this).load(bean.getMiniWebUri()).get();
+        saveBitmapToSD(webBmp, bean, SAVENOR);
+        saveBitmapToSD(miniWebBmp, bean, SAVEMINI);
+        return bean;
     }
 
 
@@ -1390,24 +1426,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private void saveBeanToDataBase(String BillName, BillBean bean)
     {
-//        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
-//        SQLiteDatabase db = dbHelper.getWritableDatabase();
-//        dbHelper.createTable(db);
-//        ContentValues values = new ContentValues();
-//        values.put("name", bean.getName());
-//        values.put("money", bean.getMoney());
-//        values.put("descripe", bean.getDescripInfo());
-//        values.put("pic", bean.getPicInfo());
-//        values.put("oldpic", bean.getOldpicInfo());
-//        values.put("date", bean.getDateInfo());
-//        values.put("picadress", bean.getPicadress());
-//        values.put("minipicadress", bean.getMiniPicAddress());
-//        values.put("weburi", bean.getWebUri());
-//        values.put("miniweburi", bean.getMiniWebUri());
-//        db.insert(BillName, null, values);
-//        Log.d("haha", BillName+"成功存入" + bean.toString() + "的完整数据");
-//        values.clear();
-//        db.close();
+
         dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
