@@ -2,7 +2,6 @@ package com.program.gyf.simplecount;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -53,6 +52,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import View.SlidingMenu;
@@ -89,6 +90,7 @@ import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
 import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
 import static tool.SharedPreferenceHelper.setLoggingStatus;
+
 /**
  * 主界面Activity
  */
@@ -112,9 +114,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
     private static final int CROP_PHOTO2 = 4;
-    public final static int CONNECT_TIMEOUT = 1000;
-    public final static int READ_TIMEOUT = 1000;
-    public final static int WRITE_TIMEOUT = 1000;
+    public final static int CONNECT_TIMEOUT = 10000;
+    public final static int READ_TIMEOUT = 10000;
+    public final static int WRITE_TIMEOUT = 10000;
     public static final String MULTIPART_FORM_DATA = "image/jpg";
     private static String SharedPreferenceName;
     private final String PHOTO_PATH = Environment.getExternalStorageDirectory() + "/ASimpleCount/";
@@ -136,6 +138,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private boolean refreshFinish;
     private boolean isdisappear = false;
     private static final int FINISHREFRESH = 1;
+    private static final int UPDATELIST = 2;
+    private ExecutorService cachedThreadPool;
+
     Handler myHandler = new Handler()
     {
         public void handleMessage(Message msg)
@@ -145,6 +150,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 case FINISHREFRESH:
                     swipeRefreshLayout.finishRefreshing();
                     Snackbar.make(swipeRefreshLayout, "同步完成", Snackbar.LENGTH_SHORT).show();
+                    break;
+                case UPDATELIST:
+                    notifyRecyclerViewUpdate();
                     break;
             }
             super.handleMessage(msg);
@@ -193,16 +201,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 postToRemoteDB();
             }
         });
-
-        File appDir = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/");
-        if (!appDir.exists())
-        {
-            appDir.mkdir();
-            Log.d("haha", "不存在路径,创建一个");
-        } else
-        {
-            Log.d("haha", "存在路径");
-        }
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         createPathIfNotExits(PHOTO_PATH);
         Intent intent = getIntent();
@@ -237,13 +235,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             getBeanFromServer();
         }
-        if (SharedPreferenceHelper.getNameFromSharedPreferences(this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this)).size() == 0)
-        {
-            showMateriaDialog();
-        } else
-        {
-            showRecyclerView();
-        }
+        showRecyclerView();
+        cachedThreadPool = Executors.newCachedThreadPool();
     }
 
     private boolean checkFirstLog()
@@ -270,6 +263,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Log.d("haha", "开始传送到服务器");
         checkServerConnect();
         List<String> billNameList = getBillList();//获取所有账单名称
+        //第一轮
         postBillNameListToDB(billNameList, USERNAME);//此处将所有账单名称传送到服务器
         final int sumOfAllitems = getAllBillNum();
         final int[] count = {0};
@@ -279,13 +273,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             final String billName = billNameList.get(index);
             final List<BillBean> beanitemList = getBeanFromDataBase(billName);
             final int size = beanitemList.size();
-            Thread thread = new Thread(new Runnable()//对每个账单开启子线程
+            for (int i = 0; i < size; i++)//对每个帐单的每个条目进行循环
             {
-                @Override
-                public void run()
+                final int finalI = i;
+                cachedThreadPool.execute(new Runnable()
                 {
-                    for (int i = 0; i < size; i++)//对每个帐单的每个条目进行循环
+                    @Override
+                    public void run()
                     {
+                        final String threadName = Thread.currentThread().getName();
+                        Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务");
                         OkHttpClient mOkHttpClient =
                                 new OkHttpClient.Builder()
                                         .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
@@ -296,39 +293,59 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         FormBody.Builder formBuilder = new FormBody.Builder();
                         formBuilder.add("username", USERNAME);//USERNAME就是username
                         formBuilder.add("billname", billName);
-                        formBuilder.add("name", beanitemList.get(i).getName());
-                        formBuilder.add("money", beanitemList.get(i).getMoneyString());
-                        formBuilder.add("describe", beanitemList.get(i).getDescripInfo());
-                        formBuilder.add("date", beanitemList.get(i).getDateInfo());
-
-                        if (beanitemList.get(i).getWebUri() == null)//上传原图
+                        formBuilder.add("name", beanitemList.get(finalI).getName());
+                        formBuilder.add("money", beanitemList.get(finalI).getMoneyString());
+                        formBuilder.add("describe", beanitemList.get(finalI).getDescripInfo());
+                        formBuilder.add("date", beanitemList.get(finalI).getDateInfo());
+                        final String[] webUri = {null};
+                        final String[] miniWebUri = {null};
+                        if (beanitemList.get(finalI).getWebUri() == null)//上传原图
                         {
                             Log.d("haha", "向SM图床获取地址");
-                            String webUri = getWebUriFromSM(beanitemList.get(i).getPicadress());
-                            while (webUri == null)
+                            cachedThreadPool.execute(new Runnable()
                             {
-                                try
+                                @Override
+                                public void run()
                                 {
-                                    Thread.sleep(1000);
-                                } catch (InterruptedException e)
-                                {
-                                    e.printStackTrace();
+                                    webUri[0] = getWebUriFromSM(beanitemList.get(finalI).getPicadress());
+                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务" + "已获得webUri" + webUri[0]);
                                 }
-                            }
-                            beanitemList.get(i).setWebUri(webUri);
-                        }
-                        formBuilder.add("picuri", beanitemList.get(i).getWebUri());
-                        if (beanitemList.get(i).getMiniWebUri() == null)
+                            });
+                        } else
                         {
-                            String miniWebUri = getWebUriFromSM(beanitemList.get(i).getMiniPicAddress());
-                            while (miniWebUri == null)
-                            {
-
-                            }
-                            beanitemList.get(i).setMiniWebUri(miniWebUri);
+                            webUri[0] = beanitemList.get(finalI).getWebUri();
                         }
-                        saveWebInfoToDataBase(billName, beanitemList.get(i));
-                        formBuilder.add("minipicuri", beanitemList.get(i).getMiniWebUri());
+                        if (beanitemList.get(finalI).getMiniWebUri() == null)
+                        {
+                            cachedThreadPool.execute(new Runnable()
+                            {
+                                @Override
+                                public void run()
+                                {
+                                    miniWebUri[0] = getWebUriFromSM(beanitemList.get(finalI).getMiniPicAddress());
+                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务" + "已获得miniwebUri" + miniWebUri[0]);
+
+                                }
+                            });
+                        } else
+                        {
+                            miniWebUri[0] = beanitemList.get(finalI).getMiniWebUri();
+                        }
+                        while (webUri[0] == null || miniWebUri[0] == null)
+                        {
+                            try
+                            {
+                                Thread.sleep(200);
+                            } catch (InterruptedException e)
+                            {
+                                e.printStackTrace();
+                            }
+                        }
+                        beanitemList.get(finalI).setMiniWebUri(miniWebUri[0]);
+                        beanitemList.get(finalI).setWebUri(webUri[0]);
+                        saveWebInfoToDataBase(billName, beanitemList.get(finalI));
+                        formBuilder.add("picuri", beanitemList.get(finalI).getWebUri());
+                        formBuilder.add("minipicuri", beanitemList.get(finalI).getMiniWebUri());
                         Request request = new Request.Builder().url(postDataUri).post(formBuilder.build()).build();
                         Call call = mOkHttpClient.newCall(request);
                         call.enqueue(new Callback()
@@ -336,6 +353,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             @Override
                             public void onFailure(Call call, final IOException e)
                             {
+                                count[0]++;
+                                Log.d("haha", finalI + "个数据失败");
 
                             }
 
@@ -356,10 +375,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             }
                         });
                     }
-                }
-            });
-            thread.start();
+                });
+
+
+            }
+
         }
+
 
     }
 
@@ -367,85 +389,82 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      * @param picadress 图片在本地的UriString
      * @return 从网络获得的UriString
      */
-    private String getWebUriFromSM(String picadress)
+    private String getWebUriFromSM(final String picadress)
     {
-        Uri uri = Uri.parse(picadress);
-        File file = new File(uri.getPath());
-        final String[] webUri = new String[1];
-        String SMUrl = "https://sm.ms/api/upload";
 
-        RequestBody requestFile =    // 根据文件格式封装文件
-                RequestBody.create(MediaType.parse(MULTIPART_FORM_DATA), file);
-        // 初始化请求体对象，设置Content-Type以及文件数据流
-        RequestBody requestBody = new MultipartBody.Builder()
-                .setType(MultipartBody.FORM)   // multipart/form-data
-                .addFormDataPart("smfile", file.getName(), requestFile)
-                .build();
-        Request request = new Request.Builder()
-                .url(SMUrl)    // 上传url地址
-                .post(requestBody)    // post请求体
-                .build();
+            Uri uri = Uri.parse(picadress);
+            File file = new File(uri.getPath());
+            final String[] webUri = new String[1];
+            String SMUrl = "https://sm.ms/api/upload";
 
-        final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
-        OkHttpClient okHttpClient = httpBuilder
-                //设置超时
-                .connectTimeout(100, TimeUnit.SECONDS)
-                .writeTimeout(150, TimeUnit.SECONDS)
-                .build();
-        okHttpClient.newCall(request).enqueue(new Callback()
-        {
+            RequestBody requestFile =    // 根据文件格式封装文件
+                    RequestBody.create(MediaType.parse(MULTIPART_FORM_DATA), file);
+            // 初始化请求体对象，设置Content-Type以及文件数据流
+            RequestBody requestBody = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)   // multipart/form-data
+                    .addFormDataPart("smfile", file.getName(), requestFile)
+                    .build();
+            Request request = new Request.Builder()
+                    .url(SMUrl)    // 上传url地址
+                    .post(requestBody)    // post请求体
+                    .build();
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException
+            final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
+            OkHttpClient okHttpClient = httpBuilder
+                    //设置超时
+                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+                    .build();
+            okHttpClient.newCall(request).enqueue(new Callback()
             {
-                String responseString = response.body().string();
-                Log.d("SM", responseString);
-                try
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
                 {
-                    JSONObject jsonObject = new JSONObject(responseString);
-                    JSONObject dataObj = jsonObject.getJSONObject("data");
-                    webUri[0] = dataObj.getString("url");
-                    Log.d("SM", "取出weburi地址" + webUri[0]);
-                } catch (JSONException e)
-                {
-                    e.printStackTrace();
+                    String responseString = response.body().string();
+                    Log.d("SM", responseString);
+                    try
+                    {
+                        JSONObject jsonObject = new JSONObject(responseString);
+                        if (!jsonObject.getString("code").equals("success"))
+                        {
+                            Log.d("SM", "失败，错误码为" + jsonObject.getString("msg"));
+                            Thread.sleep(500);
+                            webUri[0]=getWebUriFromSM(picadress);
+                        }else
+                        {
+                            JSONObject dataObj = jsonObject.getJSONObject("data");
+                            webUri[0] = dataObj.getString("url");
+                            Log.d("SM", "取出weburi地址" + webUri[0]);
+                        }
+                    } catch (JSONException | InterruptedException e)
+                    {
+                        e.printStackTrace();
+                    }
                 }
-            }
 
-            @Override
-            public void onFailure(Call arg0, IOException e)
+                @Override
+                public void onFailure(Call arg0, IOException e)
+                {
+                    // TODO Auto-generated method stub
+                    Log.d("SM", e.toString());
+                }
+
+            });
+
+            while (webUri[0] == null)
             {
-                // TODO Auto-generated method stub
-                Log.d("SM", e.toString());
+
             }
+            return webUri[0];
 
-        });
-
-        while (webUri[0] == null)
-        {
-
-        }
-        return webUri[0];
     }
 
-    public static File getFilePathFromContentUri(Uri selectedVideoUri,
-                                                 ContentResolver contentResolver)
-    {
-        String filePath;
-        String[] filePathColumn = {MediaStore.MediaColumns.DATA};
 
-        Cursor cursor = contentResolver.query(selectedVideoUri, filePathColumn, null, null, null);
-//      也可用下面的方法拿到cursor
-//      Cursor cursor = this.context.managedQuery(selectedVideoUri, filePathColumn, null, null, null);
-
-        cursor.moveToFirst();
-
-        int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-        filePath = cursor.getString(columnIndex);
-        cursor.close();
-        return new File(filePath);
-    }
-
+    /**
+     * 检查网络是否联通，是否能够连接上服务器
+     */
     private void checkServerConnect()
     {
         final boolean[] isConnect = {false};
@@ -561,70 +580,59 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
     /**
-     * 判断数据是否发生变化，如果adapter已经绑定则通知adapter更新，否则调用无参showRecyclerView()
-     *
-     * @param dataChange
+     * 此方法为让Recyclerview用动画更新数据
      */
-    private void showRecyclerView(boolean dataChange)
+    private void notifyRecyclerViewUpdate()
     {
-        if (dataChange && adapter != null)
-        {
-            adapter.addItem(beanList.size() - 1, bean);
-            recyclerView.scrollToPosition(beanList.size() - 1);
-        } else
-        {
-            showRecyclerView();
-        }
+        adapter.addItem(0, bean);
+        Log.d("haha", "插入动画执行");
+        recyclerView.scrollToPosition(0);
     }
 
 
+    /**
+     * 此方法为每次进入该Activity的时候调用
+     */
     private void showRecyclerView()
     {
         Log.d("haha", "showRecyclerView()当前billList" + getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         Log.d("haha", "数据库里有" + beanList.size() + "条数据");
-        if (beanList.size() != 0)
+        layoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(layoutManager);
+        adapter = new CardViewAdapter(beanList, this);
+        adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
         {
-            layoutManager = new LinearLayoutManager(this);
-            recyclerView.setLayoutManager(layoutManager);
-            adapter = new CardViewAdapter(beanList, this);
-            adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
+            @Override
+            public void onItemClick(View view, BillBean bean, ImageView imageView)
             {
-                @Override
-                public void onItemClick(View view, BillBean bean, ImageView imageView)
-                {
-                    intentToDetailActivity(bean, imageView);
+                intentToDetailActivity(bean, imageView);
 
-                }
-            });
-            recyclerView.setAdapter(adapter);
-            recyclerView.setItemAnimator(new DefaultItemAnimator());
-            recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
-            {
-                @Override
-                public void onScrolled(RecyclerView recyclerView, int dx, int dy)
-                {
-                    super.onScrolled(recyclerView, dx, dy);
-                    if (dy > 20)
-                    {
-                        ItemAnimition.translationToDisapper(addBillButton);
-                        ItemAnimition.toolBarDisappear(toolbar);
-
-                    } else if (dy < -10)
-                    {
-                        ItemAnimition.translationToAppear(addBillButton);
-                        ItemAnimition.toolBarAppear(toolbar);
-                    }
-                }
-            });
-
-        }
-        /*else//如果本地数据库没有数据，则尝试从服务器下载数据
+            }
+        });
+        recyclerView.setAdapter(adapter);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recyclerView.getItemAnimator().setAddDuration(500);
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
         {
-            Log.d("haha", "从服务器拉取数据");
-            getBeanFromServer();
-        }*/
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy)
+            {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy > 20)
+                {
+                    ItemAnimition.translationToDisapper(addBillButton);
+                    ItemAnimition.toolBarDisappear(toolbar);
+
+                } else if (dy < -10)
+                {
+                    ItemAnimition.translationToAppear(addBillButton);
+                    ItemAnimition.toolBarAppear(toolbar);
+                }
+            }
+        });
+
     }
 
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
@@ -694,8 +702,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             {
                                 pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
                                 pDialog.setTitleText("欢迎你新用户");
-                                pDialog.setTitleText("欢迎你新用户");
                                 pDialog.show();
+                                pDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+                                {
+                                    @Override
+                                    public void onClick(SweetAlertDialog sweetAlertDialog)
+                                    {
+                                        showMateriaDialog();
+                                        pDialog.dismiss();
+                                    }
+                                });
                             }
                         });
                         return;
@@ -806,7 +822,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         {
                             final int finalI = i;
                             //子线程内
-                            Thread thread=new Thread(new Runnable()
+                            Thread thread = new Thread(new Runnable()
                             {
                                 @Override
                                 public void run()
@@ -816,13 +832,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                     {
                                         beanObject = object.getJSONObject(String.valueOf(finalI));
                                         Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
-                                        BillBean bean=handleJsonToBean(beanObject);
+                                        BillBean bean = handleJsonToBean(beanObject);
                                         saveBeanToDataBase(billName, bean);
                                         countOfEachBillBean[0]++;
-                                        if(countOfEachBillBean[0]==sumOfEachBillBean[0])
+                                        if (countOfEachBillBean[0] == sumOfEachBillBean[0])
                                         {
                                             count[0]++;
-                                            if(count[0]==billsName.size())
+                                            if (count[0] == billsName.size())
                                             {
                                                 runOnUiThread(new Runnable()
                                                 {
@@ -836,13 +852,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                         showRecyclerView();
                                                     }
                                                 });
-                                            }else
+                                            } else
                                             {
                                                 Log.d("haha", "count 为" + count[0] + "，共有" + billsName.size());
                                             }
-                                        }else
+                                        } else
                                         {
-                                            Log.d("haha", billName+"的countOfEachBillBean 为" +countOfEachBillBean[0] + "，共有" + sumOfEachBillBean[0]);
+                                            Log.d("haha", billName + "的countOfEachBillBean 为" + countOfEachBillBean[0] + "，共有" + sumOfEachBillBean[0]);
                                         }
                                     } catch (JSONException e)
                                     {
@@ -868,6 +884,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     }
 
+    /**
+     * @param beanObject
+     * @return 将JSON数据转换为BillBean
+     * @throws JSONException
+     * @throws IOException
+     */
     private BillBean handleJsonToBean(JSONObject beanObject) throws JSONException, IOException
     {
         BillBean bean = new BillBean();
@@ -1006,8 +1028,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     intentToBillListActivity();
                     mMenu.toggleMenu();
-                }
-                else
+                } else
                 {
                     SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
                     dialog.setTitleText("您还没有账单，请先添加账单");
@@ -1271,7 +1292,24 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         saveBeanToDataBase(billName);
         Log.d("haha", "在addcard方法中" + bean.toString());
-        showRecyclerView(true);
+        Thread thread = new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    Thread.sleep(300);
+                    Message message = myHandler.obtainMessage();
+                    message.what = UPDATELIST;
+                    myHandler.sendMessage(message);
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+        thread.start();
     }
 
     /**
@@ -1410,7 +1448,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         return true;
     }
 
-    private void saveWebInfoToDataBase(String BillName, BillBean bean)
+    private synchronized void saveWebInfoToDataBase(String BillName, BillBean bean)
     {
         dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -1418,10 +1456,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         ContentValues values = new ContentValues();
         values.put("weburi", bean.getWebUri());
         values.put("miniweburi", bean.getMiniWebUri());
-        db.update(BillName, values, "name=?", new String[]{bean.getName()});
-        Log.d("haha", "成功存入" + bean.toString() + "web数据");
-        values.clear();
-        db.close();
+        try
+        {
+            db.update(BillName, values, "date=?", new String[]{bean.getDateInfo()});
+            Log.d("haha", "成功存入" + bean.toString() + "web数据");
+        } finally
+        {
+            values.clear();
+            db.close();
+        }
     }
 
     private void saveBeanToDataBase(String BillName, BillBean bean)
@@ -1449,21 +1492,31 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         tableNameDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
-        Cursor cursor = db.query(USERNAME + "TableList", null, "tableName = ?", new String[]{name}, null, null, null);
+        Cursor cursor = null;
+        try
+        {
+            cursor = db.query(USERNAME + "TableList", null, "tableName = ?", new String[]{name}, null, null, null);
 
-        if (cursor.getCount() == 0)
+            if (cursor.getCount() == 0)
+            {
+                ContentValues values = new ContentValues();
+                values.put("tableName", name);
+                db.insert(USERNAME + "TableList", null, values);
+                Log.d("haha", "成功将表名" + name + "存入数据库");
+                values.clear();
+            } else
+            {
+                Log.d("haha", name + "重复了");
+            }
+        }finally
         {
-            ContentValues values = new ContentValues();
-            values.put("tableName", name);
-            db.insert(USERNAME + "TableList", null, values);
-            Log.d("haha", "成功将表名" + name + "存入数据库");
-            values.clear();
-        } else
-        {
-            Log.d("haha", name + "重复了");
+            if (cursor != null)
+            {
+                cursor.close();
+            }
+            db.close();
         }
-        cursor.close();
-        db.close();
+
     }
 
 

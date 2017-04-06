@@ -110,8 +110,8 @@ public class BillBean
                 + "  Money" + getMoneyString()
                 + " describe is " + descripInfo
                 + "  date info is" + dateInfo
-                +" picaddress is "+picadress
-                +" minipicaddress is "+miniPicAddress;
+                +" webpic is "+webUri
+                +" miniWebPic is "+miniWebUri;
     }
 
 
