@@ -5,16 +5,16 @@
     android:id="@+id/swipe_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingTop="35dp"
-    app:tr_head_height="50dp"
-    app:tr_max_head_height="70dp"
     app:tr_enable_loadmore="false"
+    app:tr_enable_overscroll="true"
     >
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recycle_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:paddingTop="20dp"
+        android:clipToPadding="false"
         android:overScrollMode="never"
         >
 

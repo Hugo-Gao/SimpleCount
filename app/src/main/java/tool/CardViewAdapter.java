@@ -25,7 +25,10 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
     private Context context;
     private LayoutInflater mInflater;
     private onRecyclerViewItemClickListen mOnItemClickListen=null;
-
+    private int[] cutePicArray = new int[]{R.drawable.icecream01, R.drawable.icecream02,
+            R.drawable.icecream03, R.drawable.icecream04,
+            R.drawable.icecream05,R.drawable.icecream06,
+            R.drawable.icecream07,R.drawable.icecream08};
 
 
     public CardViewAdapter(List<BillBean> beenList, Context context)
@@ -64,6 +67,8 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
         holder.picInfo.setImageURI(Uri.parse(bean.getMiniPicAddress()));
         holder.dateInfo.setText(bean.getDateInfo());
         holder.itemView.setTag(bean);
+        int cuteID=position%cutePicArray.length;
+        holder.cuteInfo.setImageResource(cutePicArray[cuteID]);
         holder.itemView.setTag(R.id.pic_address,holder.picInfo);
     }
 
@@ -100,6 +105,7 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
 
         private TextView dateInfo;
         private ImageView picInfo;
+        private ImageView cuteInfo;
         public MyHolder(View itemView)
         {
             super(itemView);
@@ -107,6 +113,7 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
             Typeface customFont = Typeface.createFromAsset(context.getAssets(), "SourceHanSansCN-Light.ttf");
             dateInfo.setTypeface(customFont);
             picInfo = (ImageView) itemView.findViewById(R.id.pic_address);
+            cuteInfo = (ImageView) itemView.findViewById(R.id.cute_Pic);
         }
     }
 

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -614,7 +615,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         recyclerView.setAdapter(adapter);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.getItemAnimator().setAddDuration(500);
-        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
+        /*recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
         {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy)
@@ -631,7 +632,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     ItemAnimition.toolBarAppear(toolbar);
                 }
             }
-        });
+        });*/
 
     }
 
@@ -1167,23 +1168,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         @Override
                         public void onClick(View v)
                         {
-//                            String photoName = bean.getDateInfo() + "_image.jpg";
-//                            outputImage = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/", photoName);
-//                            try
-//                            {
-//                                if (outputImage.exists())
-//                                {
-//                                    outputImage.delete();
-//                                }
-//                                outputImage.createNewFile();
-//                            } catch (IOException e)
-//                            {
-//                                e.printStackTrace();
-//                            }
-//                            imageUri = Uri.fromFile(outputImage);//将文件路径转化为Uri对象
                             Intent intent = new Intent(Intent.ACTION_PICK);
                             intent.setType("image/*");
-//                            intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                             intent.putExtra("name", bean.getName());
                             startActivityForResult(intent, CHOOSE_PHOTO);
                             wonderfulDialog.dismiss();
@@ -1238,9 +1224,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     intent.putExtra("aspectX", 6);//裁切的宽比例
                     intent.putExtra("aspectY", 3);//裁切的高比例
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-                    bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f, 816.0f);//保存原图
+                    String filePath=tool.FileUtil.getRealPathFromURI(this, imageUri);
+                    bitmap = BitmapFactory.decodeFile(filePath);
                     saveBitmapToSD(bitmap, bean, SAVENOR);
-
                     bean.setMiniPicAddress(imageUri.toString());//裁剪图片的 uri
                     Log.d("haha", "图片Uri是" + bean.getPicadress());
                     startActivityForResult(intent, CROP_PHOTO);
@@ -1261,8 +1247,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 imgUri = data.getData();
                 Intent intent = new Intent("com.android.camera.action.CROP");
                 intent.setDataAndType(imgUri, "image/*");
-                bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);//保存原图
-
                 try
                 {
                     saveBitmapToSD(MediaStore.Images.Media.getBitmap(getContentResolver(), imgUri), bean, SAVENOR);
@@ -1281,7 +1265,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     bitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);
                     saveBitmapToSD(bitmap, bean, SAVEMINI);
-
                 }
                 addNewCard(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
                 break;

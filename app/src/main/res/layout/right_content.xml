@@ -3,13 +3,9 @@
               xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:background="#DADDD8"
               android:orientation="vertical"
+              android:background="#E9F1F7"
               android:weightSum="1">
-
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
 
         <android.support.v7.widget.Toolbar
             android:id="@+id/toolbar"
@@ -52,13 +48,9 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-
-
             <include layout="@layout/recycler_refresh"></include>
 
             <include layout="@layout/floatbutton_layout"></include>
 
-
         </FrameLayout>
-    </RelativeLayout>
 </LinearLayout>
