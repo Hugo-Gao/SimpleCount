@@ -42,16 +42,21 @@ public class BillListActivity extends Activity
     private DBOpenHelper dbHelper;
     private String USERNAME;
     private ImageView blurImage;
-    private int Oldpostion = -1;
+    private int Oldpostion = 0;
     private List<Bitmap> blurList = new ArrayList<>();
     private Drawable dpyDrawable=null;
+    private boolean blurOK=false;
     private android.os.Handler handler = new Handler(new Handler.Callback()
     {
         @Override
         public boolean handleMessage(Message msg)
         {
+            if (!blurOK)
+            {
+                return false;
+            }
             int curPosition = msg.arg1;
-            Bitmap bitmap = blurList.get((curPosition+1)%blurList.size());
+            Bitmap bitmap = blurList.get((curPosition)%blurList.size());
             TransitionDrawable td;
             if (dpyDrawable == null)
             {
@@ -65,7 +70,7 @@ public class BillListActivity extends Activity
             td.startTransition(500);
             blurImage.setImageDrawable(td);
             dpyDrawable = new BitmapDrawable(bitmap);
-            Log.d("testLog", curPosition + "");
+            Log.d("testLog", curPosition + "当前位置");
             return false;
         }
     });
@@ -79,7 +84,16 @@ public class BillListActivity extends Activity
         tableListDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
         blurImage = (ImageView) findViewById(R.id.blur_pic);
         itemList = getItemList();
-        blurAllBmp();
+        Thread thread=new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                blurAllBmp();
+                blurOK=true;
+            }
+        });
+        thread.start();
         blurImage.setImageBitmap(BitmapHandler.blur(this, itemList.get(0).getBillBitmapPic(this)));
         final HorizontalInfiniteCycleViewPager infiniteCycleViewPager =
                 (HorizontalInfiniteCycleViewPager) findViewById(R.id.hicvp);
@@ -100,24 +114,26 @@ public class BillListActivity extends Activity
         infiniteCycleViewPager.setMinPageScale(0.8F);
         infiniteCycleViewPager.setCenterPageScaleOffset(30.0F);
         infiniteCycleViewPager.setMinPageScaleOffset(5.0F);
-        Thread thread = new Thread(new Runnable()
+
+        Thread  thread2 = new Thread(new Runnable()
         {
             @Override
             public void run()
             {
                 while (true)
                 {
-                    if (adapter.curPosition != Oldpostion)
+                    if (infiniteCycleViewPager.getCurrentItem() != Oldpostion)
                     {
                         Message message = new Message();
-                        message.arg1 = adapter.curPosition;
+                        message.arg1 =infiniteCycleViewPager.getCurrentItem() ;
+                        Oldpostion=message.arg1;
                         handler.sendMessage(message);
-                        Oldpostion = adapter.curPosition;
+                        Log.d("haha", "位置改变,发送handler");
                     }
                 }
             }
         });
-        thread.start();
+        thread2.start();
 
     }
 
@@ -168,6 +184,9 @@ public class BillListActivity extends Activity
         {
             picInfo = cursor.getString(cursor.getColumnIndex("picadress"));
         }
+        cursor.close();
+        db.close();
+
         return picInfo;
     }
 }

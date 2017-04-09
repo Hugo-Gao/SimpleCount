@@ -98,7 +98,6 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
      */
     private void showCountEveryBody()
     {
-
         List<String> nameLsit;
         int money=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -133,8 +132,9 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
             layoutwrapper.addView(tv,params);
             personBillMap.put(name, money);
             money=0;
+            cursor.close();
         }
-
+        db.close();
 
     }
 
@@ -170,6 +170,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         cursor.close();
         Log.d("haha", "money sum is " + moneySum);
         moneynumText.setText(billcount+"笔支出,共"+"￥"+moneySum);
+        db.close();
     }
 
 

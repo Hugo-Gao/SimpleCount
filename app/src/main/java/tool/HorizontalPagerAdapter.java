@@ -13,9 +13,7 @@ import java.util.List;
 
 import static tool.Utils.setupItem;
 
-/**
- * Created by GIGAMOLE on 7/27/16.
- */
+
 public class HorizontalPagerAdapter extends PagerAdapter implements View.OnClickListener
 {
 
@@ -24,7 +22,7 @@ public class HorizontalPagerAdapter extends PagerAdapter implements View.OnClick
     private Context mContext;
     private LayoutInflater mLayoutInflater;
     private onItemClickViewListener mListener;
-    public   int curPosition=-1;
+    public   int curPosition=0;
 
     public HorizontalPagerAdapter(List<BillItem> libraries, final Context context)
     {
@@ -54,7 +52,6 @@ public class HorizontalPagerAdapter extends PagerAdapter implements View.OnClick
         setupItem(view, LIBRARIES.get(position),mContext);
         container.addView(view);
         view.setTag(LIBRARIES.get(position).getBillName());
-        curPosition = position;
         return view;
     }
 

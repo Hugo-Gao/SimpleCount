@@ -152,7 +152,10 @@ public class DetailActivity extends Activity
             Log.d("haha", "cursor is null");
             bean = null;
         }
-        cursor.close();
+        if(cursor!=null)
+        {
+            cursor.close();
+        }
         db.close();
         return bean;
     }

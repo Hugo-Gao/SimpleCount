@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -61,7 +60,6 @@ import View.SlidingMenu;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
 import database.TableListDBHelper;
-import id.zelory.compressor.Compressor;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
@@ -238,6 +236,30 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         }
         showRecyclerView();
         cachedThreadPool = Executors.newCachedThreadPool();
+        //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
+    }
+
+    private void deleteAllWebinfo(String billName)
+    {
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        dbHelper.createTable(db);
+        ContentValues values = new ContentValues();
+        try
+        {
+            values.put("weburi", (String) null);
+            db.update(billName, values, "_id>?", new String[]{"0"});
+            values.clear();
+            values.put("miniweburi", (String) null);
+            db.update(billName, values, "_id>?", new String[]{"0"});
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+        } finally
+        {
+            values.clear();
+            db.close();
+        }
     }
 
     private boolean checkFirstLog()
@@ -247,11 +269,16 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
         if (cursor.getCount() == 0)
         {
+            cursor.close();
+            db.close();
             return true;
         } else
         {
+            cursor.close();
+            db.close();
             return false;
         }
+
     }
 
     /**
@@ -308,8 +335,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                 @Override
                                 public void run()
                                 {
+                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务 ->webUri");
                                     webUri[0] = getWebUriFromSM(beanitemList.get(finalI).getPicadress());
-                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务" + "已获得webUri" + webUri[0]);
                                 }
                             });
                         } else
@@ -323,9 +350,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                 @Override
                                 public void run()
                                 {
+                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务 ->miniwebUri");
                                     miniWebUri[0] = getWebUriFromSM(beanitemList.get(finalI).getMiniPicAddress());
-                                    Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务" + "已获得miniwebUri" + miniWebUri[0]);
-
                                 }
                             });
                         } else
@@ -393,72 +419,83 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private String getWebUriFromSM(final String picadress)
     {
 
-            Uri uri = Uri.parse(picadress);
-            File file = new File(uri.getPath());
-            final String[] webUri = new String[1];
-            String SMUrl = "https://sm.ms/api/upload";
+       final long startTime= System.currentTimeMillis();
+        Uri uri = Uri.parse(picadress);
+        File file = new File(uri.getPath());
+        final String[] webUri = new String[1];
+        String SMUrl = "https://sm.ms/api/upload";
+        RequestBody requestFile =    // 根据文件格式封装文件
+                RequestBody.create(MediaType.parse(MULTIPART_FORM_DATA), file);
+        // 初始化请求体对象，设置Content-Type以及文件数据流
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)   // multipart/form-data
+                .addFormDataPart("smfile", file.getName(), requestFile)
+                .build();
+        Request request = new Request.Builder()
+                .url(SMUrl)    // 上传url地址
+                .post(requestBody)    // post请求体
+                .build();
 
-            RequestBody requestFile =    // 根据文件格式封装文件
-                    RequestBody.create(MediaType.parse(MULTIPART_FORM_DATA), file);
-            // 初始化请求体对象，设置Content-Type以及文件数据流
-            RequestBody requestBody = new MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)   // multipart/form-data
-                    .addFormDataPart("smfile", file.getName(), requestFile)
-                    .build();
-            Request request = new Request.Builder()
-                    .url(SMUrl)    // 上传url地址
-                    .post(requestBody)    // post请求体
-                    .build();
+        final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
+        OkHttpClient okHttpClient = httpBuilder
+                //设置超时
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+                .build();
 
-            final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
-            OkHttpClient okHttpClient = httpBuilder
-                    //设置超时
-                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
-                    .build();
-            okHttpClient.newCall(request).enqueue(new Callback()
+        okHttpClient.newCall(request).enqueue(new Callback()
+        {
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
             {
-
-                @Override
-                public void onResponse(Call call, Response response) throws IOException
+                String responseString = response.body().string();
+                Log.d("SM", responseString);
+                try
                 {
-                    String responseString = response.body().string();
-                    Log.d("SM", responseString);
-                    try
+                    JSONObject jsonObject = new JSONObject(responseString);
+                    if (!jsonObject.getString("code").equals("success"))
                     {
-                        JSONObject jsonObject = new JSONObject(responseString);
-                        if (!jsonObject.getString("code").equals("success"))
-                        {
-                            Log.d("SM", "失败，错误码为" + jsonObject.getString("msg"));
-                            Thread.sleep(500);
-                            webUri[0]=getWebUriFromSM(picadress);
-                        }else
-                        {
-                            JSONObject dataObj = jsonObject.getJSONObject("data");
-                            webUri[0] = dataObj.getString("url");
-                            Log.d("SM", "取出weburi地址" + webUri[0]);
-                        }
-                    } catch (JSONException | InterruptedException e)
+                        Log.d("SM", "失败，错误码为" + jsonObject.getString("msg"));
+                        Thread.sleep(500);
+                        webUri[0] = getWebUriFromSM(picadress);
+                    } else
                     {
-                        e.printStackTrace();
+                        JSONObject dataObj = jsonObject.getJSONObject("data");
+                        webUri[0] = dataObj.getString("url");
+                        Log.d("SM", "取出weburi地址" + webUri[0]);
                     }
-                }
-
-                @Override
-                public void onFailure(Call arg0, IOException e)
+                    long testendTime= System.currentTimeMillis();
+                    Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了"+(testendTime-startTime)/1000+"获取json");
+                } catch (JSONException | InterruptedException e)
                 {
-                    // TODO Auto-generated method stub
-                    Log.d("SM", e.toString());
+                    e.printStackTrace();
                 }
-
-            });
-
-            while (webUri[0] == null)
-            {
-
             }
-            return webUri[0];
+
+            @Override
+            public void onFailure(Call arg0, IOException e)
+            {
+                // TODO Auto-generated method stub
+                Log.d("SM", e.toString());
+            }
+
+        });
+
+        while (webUri[0] == null)
+        {
+            try
+            {
+                Thread.sleep(500);
+            } catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        long endTime= System.currentTimeMillis();
+        Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了"+(endTime-startTime)/1000+"秒获取weburl");
+        return webUri[0];
 
     }
 
@@ -1221,12 +1258,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     Intent intent = new Intent("com.android.camera.action.CROP");
                     intent.setDataAndType(imageUri, "image/*");
                     intent.putExtra("scale", true);
-                    intent.putExtra("aspectX", 6);//裁切的宽比例
+                    intent.putExtra("aspectX", 4);//裁切的宽比例
                     intent.putExtra("aspectY", 3);//裁切的高比例
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-                    String filePath=tool.FileUtil.getRealPathFromURI(this, imageUri);
-                    bitmap = BitmapFactory.decodeFile(filePath);
-                    saveBitmapToSD(bitmap, bean, SAVENOR);
+                    bitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f, 816.0f);//压缩图片
+                    saveBitmapToSD(bitmap, bean, SAVENOR);//保存原图片
                     bean.setMiniPicAddress(imageUri.toString());//裁剪图片的 uri
                     Log.d("haha", "图片Uri是" + bean.getPicadress());
                     startActivityForResult(intent, CROP_PHOTO);
@@ -1235,8 +1271,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             case CROP_PHOTO://从相机过来裁剪照片
                 if (resultCode == RESULT_OK)
                 {
-                    bitmap = Compressor.getDefault(this).compressToBitmap(outputImage);
-
+                    Bitmap scaleBitmap = tool.ImageUtil.getScaledBitmap(this, imageUri, 612.0f, 816.0f);//压缩图片
+                    saveBitmapToSD(scaleBitmap, bean, SAVEMINI);//保存原图片
                     /**
                      * 数据获取完毕，增加卡片
                      */
@@ -1247,13 +1283,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 imgUri = data.getData();
                 Intent intent = new Intent("com.android.camera.action.CROP");
                 intent.setDataAndType(imgUri, "image/*");
-                try
-                {
-                    saveBitmapToSD(MediaStore.Images.Media.getBitmap(getContentResolver(), imgUri), bean, SAVENOR);
-                } catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
+                Bitmap normalBitmap = tool.ImageUtil.getScaledBitmap(this, imgUri, 612.0f, 816.0f);//压缩原图
+
+                // saveBitmapToSD(MediaStore.Images.Media.getBitmap(getContentResolver(), imgUri), bean, SAVENOR);
+                saveBitmapToSD(normalBitmap, bean, SAVENOR);//保存原图
                 intent.putExtra("scale", true);
                 intent.putExtra("aspectX", 4);//裁切的宽比例
                 intent.putExtra("aspectY", 3);//裁切的高比例
@@ -1491,7 +1524,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             {
                 Log.d("haha", name + "重复了");
             }
-        }finally
+        } finally
         {
             if (cursor != null)
             {
@@ -1516,10 +1549,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         List<BillBean> beanList = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        Cursor cursor = db.query(BillName, null, null, null, null, null, null);
         try
         {
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
-            Cursor cursor = db.query(BillName, null, null, null, null, null, null);
             if (cursor != null)
             {
                 String[] columns = cursor.getColumnNames();
@@ -1569,6 +1602,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         } catch (Exception e)
         {
             return beanList;
+        }finally
+        {
+            cursor.close();
+            db.close();
         }
         return beanList;
     }
