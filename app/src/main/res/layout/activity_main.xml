@@ -1,35 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout
+<android.support.v4.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:hugo="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/caidanColor"
-    >
-
-    <View.SlidingMenu
-        android:id="@+id/Menu"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        hugo:rightPadding="100dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:fitsSystemWindows="true"
-        >
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
+    android:layout_height="match_parent">
+    <!-- The main content view -->
+    <include layout="@layout/right_content"></include>
 
 
-            <include layout="@layout/left_menu"></include>
-            
-            <include layout="@layout/right_content"></include>
+    <!-- The navigation drawer -->
+    <include layout="@layout/left_menu"></include>
 
 
-
-        </LinearLayout>
-
-
-    </View.SlidingMenu>
-</RelativeLayout>
+</android.support.v4.widget.DrawerLayout>

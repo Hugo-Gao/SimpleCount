@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
@@ -10,8 +10,8 @@
         <android.support.v7.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="35dp"
-            android:background="@color/caidanColor"
+            android:layout_height="60dp"
+            android:background="@color/Blue"
             android:elevation="4dp"
             >
 
@@ -21,14 +21,17 @@
                 android:layout_height="20dp"
                 android:background="@mipmap/menubutton"
                 android:onClick="toggleMenu"
+                android:layout_marginBottom="25dp"
+                android:layout_gravity="left|bottom"
+
                 />
 
             <TextView
                 android:id="@+id/title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="10dp"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginBottom="25dp"
                 android:text="@string/TitleString"
                 android:textSize="20sp"
                 />
@@ -37,20 +40,16 @@
                 android:id="@+id/finish_bill"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:layout_gravity="right"
+                android:layout_marginBottom="25dp"
                 android:layout_marginRight="10dp"
+                android:layout_gravity="right|bottom"
                 android:background="@mipmap/ok"
                 />
         </android.support.v7.widget.Toolbar>
 
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
 
             <include layout="@layout/recycler_refresh"></include>
 
             <include layout="@layout/floatbutton_layout"></include>
 
-        </FrameLayout>
-</LinearLayout>
+</FrameLayout>

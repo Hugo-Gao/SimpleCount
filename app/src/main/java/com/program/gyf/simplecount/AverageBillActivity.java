@@ -20,6 +20,8 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -56,7 +58,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import View.SlidingMenu;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
 import database.TableListDBHelper;
@@ -87,6 +88,7 @@ import static tool.ServerIP.TESTURL;
 import static tool.SharedPreferenceHelper.SaveNameToSharedPreference;
 import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getRealBillNameFromSharedPreferences;
+import static tool.SharedPreferenceHelper.getTableNameBySP;
 import static tool.SharedPreferenceHelper.saveRealBillNameToSharedPreferences;
 import static tool.SharedPreferenceHelper.setLoggingStatus;
 
@@ -96,7 +98,6 @@ import static tool.SharedPreferenceHelper.setLoggingStatus;
 public class AverageBillActivity extends Activity implements View.OnClickListener
 {
     public String USERNAME;
-    private SlidingMenu mMenu;
     private FloatingActionButton addBillButton;
     private FloatingActionButton numOfManButton;
     private EditText editText;//这个编辑框是在初始化的对话框的
@@ -109,6 +110,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private RecyclerView.LayoutManager layoutManager;
     private EditText moneyEditText;//创建账单中的金额输入框
     private EditText descripeEditText;//创建账单中的描述输入框
+    private DrawerLayout drawerLayout;
+    private boolean toogle=false;
     private static final int TAKE_PHOTO = 1;
     private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
@@ -132,6 +135,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private final String getDataUri = GETDATAURL;
     private final String testUri = TESTURL;
     private TextView titleText;
+    private TextView tv_user_name;
     private Button finish_btn;
     private TextView viewAllBillText;
     private boolean refreshFinish;
@@ -153,6 +157,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 case UPDATELIST:
                     notifyRecyclerViewUpdate();
                     break;
+
             }
             super.handleMessage(msg);
         }
@@ -180,7 +185,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         finish_btn.setOnClickListener(this);
         viewAllBillText = (TextView) findViewById(R.id.view_all_bills);
         viewAllBillText.setOnClickListener(this);
-        mMenu = (SlidingMenu) findViewById(R.id.Menu);
         addBillButton = (FloatingActionButton) findViewById(R.id.floatbutton);
         addBillButton.setOnClickListener(this);
         TextView addPersonButton = (TextView) findViewById(R.id.add_people_button);
@@ -208,6 +212,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
         titleText.setText("");
+        tv_user_name = (TextView) findViewById(R.id.user_name);
+        tv_user_name.setText("欢迎,"+getTableNameBySP(this));
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
         {
             saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
@@ -216,7 +223,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             Log.d("haha", "没有从ACtiviyi传入数据");
         }
-        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);//以用户名作为表名
+        USERNAME = getTableNameBySP(this);//以用户名作为表名
         Log.d("haha", "用户名" + USERNAME);
         SharedPreferenceName = USERNAME;
         tableNameDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
@@ -419,7 +426,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private String getWebUriFromSM(final String picadress)
     {
 
-       final long startTime= System.currentTimeMillis();
+        final long startTime = System.currentTimeMillis();
         Uri uri = Uri.parse(picadress);
         File file = new File(uri.getPath());
         final String[] webUri = new String[1];
@@ -466,8 +473,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         webUri[0] = dataObj.getString("url");
                         Log.d("SM", "取出weburi地址" + webUri[0]);
                     }
-                    long testendTime= System.currentTimeMillis();
-                    Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了"+(testendTime-startTime)/1000+"获取json");
+                    long testendTime = System.currentTimeMillis();
+                    Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了" + (testendTime - startTime) / 1000 + "获取json");
                 } catch (JSONException | InterruptedException e)
                 {
                     e.printStackTrace();
@@ -493,8 +500,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 e.printStackTrace();
             }
         }
-        long endTime= System.currentTimeMillis();
-        Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了"+(endTime-startTime)/1000+"秒获取weburl");
+        long endTime = System.currentTimeMillis();
+        Log.d("xcc", "线程：" + Thread.currentThread().getName() + "花了" + (endTime - startTime) / 1000 + "秒获取weburl");
         return webUri[0];
 
     }
@@ -633,9 +640,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void showRecyclerView()
     {
+        if (getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
+        {
+            return ;
+        }
         Log.d("haha", "showRecyclerView()当前billList" + getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-        beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+        beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(this));
         Log.d("haha", "数据库里有" + beanList.size() + "条数据");
         layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
@@ -646,12 +657,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             public void onItemClick(View view, BillBean bean, ImageView imageView)
             {
                 intentToDetailActivity(bean, imageView);
-
             }
         });
         recyclerView.setAdapter(adapter);
-        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        final DefaultItemAnimator animator = new DefaultItemAnimator();
+        recyclerView.setItemAnimator(animator);
         recyclerView.getItemAnimator().setAddDuration(500);
+
         /*recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
         {
             @Override
@@ -670,8 +682,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 }
             }
         });*/
-
     }
+
 
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
     {
@@ -959,11 +971,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         return text;
     }
 
-    public void toggleMenu(View view)//与切换菜单按钮关联,点击切换菜单按钮的点击事件
-    {
 
-        mMenu.toggleMenu();//此方法可以自动打开或隐藏菜单
-    }
 
     @Override
     public void onClick(View view)
@@ -971,7 +979,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         switch (view.getId())
         {
             case R.id.add_people_button:
-                mMenu.toggleMenu();
+                //这儿
+                drawerLayout.closeDrawers();
                 if (!showMateriaDialog())
                 {
                     SweetAlertDialog sweetAlertDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
@@ -1036,36 +1045,54 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         @Override
                         public void onClick(View v)
                         {
-                            toggleMenu(v);
+                            drawerLayout.openDrawer(GravityCompat.START);
                         }
                     }).show();
                 }
 
                 break;
             case R.id.settlemoney:
-                isdisappear = false;
-                Intent intent = new Intent(this, SettleMoneyActivity.class);
-                intent.putExtra("transition", "fade");
-                intent.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                if(getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
                 {
-                    startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this).toBundle());
-                    finishThisActivity(this);
-                } else
+                    SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
+                    dialog.setTitleText("您还没有账单，请先添加账单");
+                    dialog.setCancelable(true);
+                    dialog.show();
+                } else if (getBeanFromDataBase(getRealBillNameFromSharedPreferences(AverageBillActivity.this)).size() == 0)
                 {
-                    startActivity(intent);
+                    SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
+                    dialog.setTitleText("您还没有账单，请先添加账单");
+                    dialog.setCancelable(true);
+                    dialog.show();
+                }else
+                {
+                    isdisappear = false;
+                    Intent intent = new Intent(this, SettleMoneyActivity.class);
+                    intent.putExtra("transition", "fade");
+                    intent.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                    {
+                        startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this).toBundle());
+                        finishThisActivity(this);
+                    } else
+                    {
+                        startActivity(intent);
+                    }
+                    //这儿
+                    drawerLayout.closeDrawers();
                 }
-                mMenu.toggleMenu();
                 break;
             case R.id.finish_bill:
                 finishBill();
-                mMenu.toggleMenu();
+
+                //这儿
                 break;
             case R.id.view_all_bills:
                 if (getBillList().size() > 0)
                 {
                     intentToBillListActivity();
-                    mMenu.toggleMenu();
+                    drawerLayout.closeDrawers();
+                    //这儿
                 } else
                 {
                     SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
@@ -1602,7 +1629,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         } catch (Exception e)
         {
             return beanList;
-        }finally
+        } finally
         {
             cursor.close();
             db.close();

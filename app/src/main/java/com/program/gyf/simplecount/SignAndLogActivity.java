@@ -137,7 +137,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
                             sharedPreferences = getSharedPreferences("UserIDAndPassword", MODE_PRIVATE);
                             SharedPreferences.Editor editor = sharedPreferences.edit();
                             editor.putString("username", userName);
-                            editor.commit();
+                            editor.apply();
                         }
 
                     }

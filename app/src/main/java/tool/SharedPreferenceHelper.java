@@ -16,6 +16,7 @@ import static android.content.Context.MODE_PRIVATE;
 public class SharedPreferenceHelper
 {
 
+    /**账单存出游人调用*/
     public static void SaveNameToSharedPreference(Context context,String nameString,String SPName,String billName)
     {
         SharedPreferences preference = context.getSharedPreferences(SPName, MODE_PRIVATE);
@@ -24,6 +25,7 @@ public class SharedPreferenceHelper
         Log.d("haha", nameString + "保存完毕");
         editor.apply();
     }
+
 
     public static  List<String> getNameFromSharedPreferences(Context context,String SPName,String billName)//从SharedPreferences取出名字
     {
