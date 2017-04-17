@@ -76,6 +76,7 @@ import tool.SharedPreferenceHelper;
 import tool.WonderfulDialog;
 
 import static android.content.ContentValues.TAG;
+import static java.lang.Thread.sleep;
 import static tool.AcivityHelper.finishThisActivity;
 import static tool.ImageUtil.SAVEMINI;
 import static tool.ImageUtil.SAVENOR;
@@ -111,7 +112,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private EditText moneyEditText;//创建账单中的金额输入框
     private EditText descripeEditText;//创建账单中的描述输入框
     private DrawerLayout drawerLayout;
-    private boolean toogle=false;
+    private TextView handText;
+    private ImageView handPic;
+    private boolean toogle = false;
     private static final int TAKE_PHOTO = 1;
     private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
@@ -137,11 +140,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private TextView titleText;
     private TextView tv_user_name;
     private Button finish_btn;
+    private Button toogleButton;
     private TextView viewAllBillText;
     private boolean refreshFinish;
     private boolean isdisappear = false;
     private static final int FINISHREFRESH = 1;
     private static final int UPDATELIST = 2;
+    private static final int START_HAND_ANIMATE = 3;
+    private boolean firstMove = true;
+    private boolean startHandAnimateFlag = false;
     private ExecutorService cachedThreadPool;
 
     Handler myHandler = new Handler()
@@ -156,6 +163,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     break;
                 case UPDATELIST:
                     notifyRecyclerViewUpdate();
+                    break;
+                case START_HAND_ANIMATE:
+                    startHandAnimate(startHandAnimateFlag);
                     break;
 
             }
@@ -181,6 +191,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        cachedThreadPool = Executors.newCachedThreadPool();
         finish_btn = (Button) findViewById(R.id.finish_bill);
         finish_btn.setOnClickListener(this);
         viewAllBillText = (TextView) findViewById(R.id.view_all_bills);
@@ -213,8 +224,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         titleText.setTypeface(titleFont);
         titleText.setText("");
         tv_user_name = (TextView) findViewById(R.id.user_name);
-        tv_user_name.setText("欢迎,"+getTableNameBySP(this));
+        tv_user_name.setText("欢迎," + getTableNameBySP(this));
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        handPic = (ImageView) findViewById(R.id.hand_pic);
+        handText = (TextView) findViewById(R.id.hand_text);
+        toogleButton = (Button) findViewById(R.id.toogleButton);
+        toogleButton.setOnClickListener(this);
         if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
         {
             saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
@@ -230,19 +245,26 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
         tableNameDBHelper.create(db);
         db.close();
-
         if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+            closeHandAnimate();
+        } else
+        {
+            startHandAnimate(true);
         }
-
-
         if (checkFirstLog())
         {
             getBeanFromServer();
         }
-        showRecyclerView();
-        cachedThreadPool = Executors.newCachedThreadPool();
+
+        try
+        {
+            showRecyclerView();
+        } catch (Exception e)
+        {
+            Log.d("haha", "数据库读取错误");
+        }
         //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
     }
 
@@ -268,6 +290,61 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             db.close();
         }
     }
+
+    /**
+     * 开启没有创建账单时的动画提醒
+     *
+     * @param start 是否开始动画
+     */
+    private void startHandAnimate(boolean start)
+    {
+        if (!start)
+        {
+            startHandAnimateFlag = false;
+            Log.d("test", "停止动画");
+            return;
+        }
+        if (!firstMove)
+        {
+            handPic.setX(140);
+            handPic.setY(540);
+        }
+        firstMove = false;
+        handText.setVisibility(View.VISIBLE);
+        handPic.setVisibility(View.VISIBLE);
+        Log.d("test", "开始动画");
+        ItemAnimition.handMove(handPic);
+        startHandAnimateFlag = true;
+        cachedThreadPool.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    sleep(1500);
+                    Message message = myHandler.obtainMessage();
+                    message.what = START_HAND_ANIMATE;
+                    myHandler.sendMessage(message);
+                } catch (InterruptedException e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    /**
+     * 关闭没有创建账单时的动画提醒
+     */
+    private void closeHandAnimate()
+    {
+
+        handText.setVisibility(View.INVISIBLE);
+        handPic.setVisibility(View.INVISIBLE);
+        firstMove = true;
+    }
+
 
     private boolean checkFirstLog()
     {
@@ -369,7 +446,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         {
                             try
                             {
-                                Thread.sleep(200);
+                                sleep(200);
                             } catch (InterruptedException e)
                             {
                                 e.printStackTrace();
@@ -465,7 +542,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     if (!jsonObject.getString("code").equals("success"))
                     {
                         Log.d("SM", "失败，错误码为" + jsonObject.getString("msg"));
-                        Thread.sleep(500);
+                        sleep(500);
                         webUri[0] = getWebUriFromSM(picadress);
                     } else
                     {
@@ -494,7 +571,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             try
             {
-                Thread.sleep(500);
+                sleep(500);
             } catch (InterruptedException e)
             {
                 e.printStackTrace();
@@ -638,11 +715,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     /**
      * 此方法为每次进入该Activity的时候调用
      */
-    private void showRecyclerView()
+    private void showRecyclerView() throws RuntimeException
     {
         if (getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
-            return ;
+            return;
         }
         Log.d("haha", "showRecyclerView()当前billList" + getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -972,7 +1049,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     }
 
 
-
     @Override
     public void onClick(View view)
     {
@@ -997,6 +1073,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     sweetAlertDialog.show();
                 }
                 break;
+            case R.id.toogleButton:
+                drawerLayout.openDrawer(GravityCompat.START);
+                break;
+
             case R.id.returnLog:
                 final SweetAlertDialog confirmReturnDialog = new SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE);
 
@@ -1052,7 +1132,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
                 break;
             case R.id.settlemoney:
-                if(getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
+                if (getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
                 {
                     SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE);
                     dialog.setTitleText("您还没有账单，请先添加账单");
@@ -1064,7 +1144,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     dialog.setTitleText("您还没有账单，请先添加账单");
                     dialog.setCancelable(true);
                     dialog.show();
-                }else
+                } else
                 {
                     isdisappear = false;
                     Intent intent = new Intent(this, SettleMoneyActivity.class);
@@ -1342,7 +1422,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             {
                 try
                 {
-                    Thread.sleep(300);
+                    sleep(300);
                     Message message = myHandler.obtainMessage();
                     message.what = UPDATELIST;
                     myHandler.sendMessage(message);
@@ -1454,6 +1534,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                 , nameString, SharedPreferenceName, billName);
                                         materialDialog.dismiss();
                                         titleText.setText(billName);
+                                        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+                                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+                                        dbHelper.createTable(db);
+                                        db.close();
                                         Snackbar.make(addBillButton, "保存成功" + billName, Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
                                         {
                                             @Override
@@ -1462,6 +1546,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                 SharedPreferenceHelper.deleteAllName(AverageBillActivity.this, SharedPreferenceName);
                                             }
                                         }).show();
+                                        startHandAnimate(false);
+                                        closeHandAnimate();
                                     }
                                 }
 
@@ -1577,9 +1663,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
         List<BillBean> beanList = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(BillName, null, null, null, null, null, null);
+        Cursor cursor = null;
         try
         {
+             cursor = db.query(BillName, null, null, null, null, null, null);
             if (cursor != null)
             {
                 String[] columns = cursor.getColumnNames();
@@ -1628,10 +1715,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
         } catch (Exception e)
         {
-            return beanList;
+            Log.d("haha","数据库读取错误");
         } finally
         {
-            cursor.close();
+            if (cursor != null)
+            {
+                cursor.close();
+            }
             db.close();
         }
         return beanList;

@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
@@ -141,7 +142,14 @@ public class BillListActivity extends Activity
     {
         for (BillItem item : itemList)
         {
-            blurList.add(BitmapHandler.blur(this, item.getBillBitmapPic(this)));
+            if(item.getBillBitmapPic(this)!=null)
+            {
+                blurList.add(BitmapHandler.blur(this, item.getBillBitmapPic(this)));
+            }else
+            {
+                Bitmap  bitmap = BitmapFactory.decodeResource(this.getResources() ,R.drawable.ic_launcher);
+                blurList.add(BitmapHandler.blur(this, bitmap));
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package tool;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 
 /**
  * Created by Administrator on 2016/10/2.
@@ -49,7 +50,15 @@ public  class ItemAnimition
         animator3.start();
         animator4.setDuration(300);
         animator4.start();
+    }
 
+    public static void handMove(View view)
+    {
+
+        ObjectAnimator animator = ObjectAnimator.ofFloat(view, "translationX",300f);
+        animator.setDuration(1000);
+        animator.setInterpolator(new AccelerateDecelerateInterpolator());
+        animator.start();
     }
     public static void translationToDisapper(View view)
     {

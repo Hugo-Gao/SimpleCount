@@ -36,6 +36,10 @@ public class BillItem
     {
         try
         {
+            if (picAddress==null)
+            {
+                return null;
+            }
             return MediaStore.Images.Media.getBitmap(context.getContentResolver(),Uri.parse(picAddress));
         } catch (IOException e)
         {

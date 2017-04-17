@@ -12,7 +12,7 @@
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:background="@color/Blue"
-            android:elevation="4dp"
+            android:elevation="10dp"
             >
 
             <Button
@@ -41,12 +41,29 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:layout_marginBottom="25dp"
-                android:layout_marginRight="10dp"
-                android:layout_gravity="right|bottom"
+                android:layout_marginEnd="10dp"
+                android:layout_gravity="end|bottom"
                 android:background="@mipmap/ok"
                 />
         </android.support.v7.widget.Toolbar>
 
+            <ImageView
+                android:layout_width="75dp"
+                android:layout_height="75dp"
+                android:src="@drawable/hand"
+                android:layout_marginTop="270dp"
+                android:layout_marginStart="70dp"
+                android:id="@+id/hand_pic"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="360dp"
+                android:textSize="20sp"
+                android:id="@+id/hand_text"
+                android:text="@string/attentionStirng"/>
 
             <include layout="@layout/recycler_refresh"></include>
 

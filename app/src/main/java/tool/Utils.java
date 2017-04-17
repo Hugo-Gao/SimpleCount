@@ -19,7 +19,13 @@ public class Utils
         final TextView txt = (TextView) view.findViewById(R.id.txt_item);
         txt.setText(item.getBillName());
         final ImageView img = (ImageView) view.findViewById(R.id.img_item);
-        img.setImageURI(Uri.parse(item.getBillPic()));
+        if(item.getBillBitmapPic(context)!=null)
+        {
+            img.setImageURI(Uri.parse(item.getBillPic()));
+        }else
+        {
+            img.setImageResource(R.drawable.ic_launcher);
+        }
     }
 
 
