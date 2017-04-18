@@ -147,7 +147,7 @@ public class BillListActivity extends Activity
                 blurList.add(BitmapHandler.blur(this, item.getBillBitmapPic(this)));
             }else
             {
-                Bitmap  bitmap = BitmapFactory.decodeResource(this.getResources() ,R.drawable.ic_launcher);
+                Bitmap  bitmap = BitmapFactory.decodeResource(this.getResources() ,R.mipmap.settlebackground);
                 blurList.add(BitmapHandler.blur(this, bitmap));
             }
         }

@@ -3,7 +3,7 @@
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:background="#5D4037"
+              android:background="@color/mainColor"
     >
 
     <TextView
@@ -16,4 +16,5 @@
         android:layout_marginTop="200dp"
         android:id="@+id/textView"
         android:textColor="#E5DCC5"/>
+
 </LinearLayout>

@@ -31,15 +31,14 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jaredrummler.materialspinner.MaterialSpinner;
 import com.lcodecore.tkrefreshlayout.RefreshListenerAdapter;
 import com.lcodecore.tkrefreshlayout.TwinklingRefreshLayout;
 import com.squareup.picasso.Picasso;
@@ -733,7 +732,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onItemClick(View view, BillBean bean, ImageView imageView)
             {
-                intentToDetailActivity(bean, imageView);
+                if(!drawerLayout.isDrawerOpen(GravityCompat.START))
+                {
+                    intentToDetailActivity(bean, imageView);
+                }
             }
         });
         recyclerView.setAdapter(adapter);
@@ -1221,28 +1223,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         });
         materialDialog.show();
         final FloatingActionButton confrimButton = (FloatingActionButton) materialDialog.findViewById(R.id.confirmButton);
-        Spinner spinner = (Spinner) materialDialog.findViewById(R.id.name_spinner);
+        MaterialSpinner spinner = (MaterialSpinner) materialDialog.findViewById(R.id.name_spinner);
         moneyEditText = (EditText) materialDialog.findViewById(R.id.money_num_edit);
         descripeEditText = (EditText) materialDialog.findViewById(R.id.des_bill_edit);
-
         final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this));
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(AverageBillActivity.this, android.R.layout.simple_spinner_item, nameList);
-        spinner.setAdapter(adapter);
-
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()//设置spinner的点击事件
+        spinner.setItems(nameList);
+        spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener()
         {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+            public void onItemSelected(MaterialSpinner view, int position, long id, Object item)
             {
                 bean.setName(nameList.get(position));
             }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent)
-            {
-                //Nothing
-            }
-
         });
 
         confrimButton.setOnClickListener(new View.OnClickListener()

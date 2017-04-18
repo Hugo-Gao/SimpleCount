@@ -24,7 +24,7 @@ public class Utils
             img.setImageURI(Uri.parse(item.getBillPic()));
         }else
         {
-            img.setImageResource(R.drawable.ic_launcher);
+            img.setImageResource(R.mipmap.settlebackground);
         }
     }
 

@@ -4,7 +4,7 @@
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
-              android:background="#5D4037"
+              android:background="@color/mainColor"
     >
 
     <TextView
@@ -16,7 +16,7 @@
         android:layout_marginTop="90dp"
         android:id="@+id/textView"
         android:transitionName="titleShare"
-        android:textColor="#E5DCC5"/>
+        android:textColor="@color/textColor"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -29,8 +29,9 @@
             android:layout_width="300dp"
             android:layout_height="240dp"
             android:layout_marginTop="60dp"
-            app:cardBackgroundColor="#E5DCC5"
-            app:cardCornerRadius="10dp"
+            app:cardBackgroundColor="#ffffff"
+            app:cardCornerRadius="5dp"
+
             >
 
             <android.support.design.widget.TextInputLayout

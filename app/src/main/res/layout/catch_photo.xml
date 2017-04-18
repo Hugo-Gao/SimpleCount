@@ -21,6 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="25dp"
+            android:textColor="@color/textColor"
             android:text="为你的日志添加日志"
             android:textSize="30dp"/>
     </LinearLayout>

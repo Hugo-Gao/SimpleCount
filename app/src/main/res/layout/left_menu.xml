@@ -9,7 +9,7 @@
         android:id="@+id/linearLayout"
         android:layout_width="match_parent"
         android:layout_height="420dp"
-        android:background="@color/Blue"
+        android:background="@color/mainColor"
         android:orientation="vertical"
         >
 
@@ -32,7 +32,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:id="@+id/user_name"
-                android:textColor="@color/blue_btn_bg_color"
+                android:textColor="@color/textColor"
                 android:textSize="25sp"
                 android:text="用户名"
                 />
@@ -57,6 +57,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
+                android:textColor="@color/textColor"
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
@@ -85,6 +86,7 @@
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
+                android:textColor="@color/textColor"
                 android:text="结算"
                 android:textSize="20sp"/>
         </LinearLayout>
@@ -110,6 +112,7 @@
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
+                android:textColor="@color/textColor"
                 android:text="我的账本集"
                 android:textSize="20sp"/>
         </LinearLayout>

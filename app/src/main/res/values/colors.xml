@@ -5,6 +5,7 @@
     <color name="colorAccent">#FF4081</color>
     <color name="dialogColor">#F0F66E</color>
     <color name="wanted">#757575</color>
-    <color name="mainColor">#607D8B</color>
+    <color name="mainColor">#333843</color>
+    <color name="textColor">#DEE1DA</color>
     <color name="caidanColor">#3F51B5</color>
 </resources>
