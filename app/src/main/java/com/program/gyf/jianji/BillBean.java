@@ -1,4 +1,4 @@
-package com.program.gyf.simplecount;
+package com.program.gyf.jianji;
 
 /**
  * Created by Administrator on 2016/9/28.

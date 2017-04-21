@@ -7,23 +7,65 @@
     android:orientation="vertical"
     >
 
-    <ImageView
-        android:id="@+id/blur_pic"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/colorAccent"
-        android:scaleType="centerCrop"/>
+    <Button
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:background="@mipmap/back"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="25dp"
+        android:clickable="false"
+        android:foreground="?attr/selectableItemBackground"
+        android:id="@+id/back_btn"/>
 
-    <com.gigamole.infinitecycleviewpager.HorizontalInfiniteCycleViewPager
-        android:id="@+id/hicvp"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:icvp_center_page_scale_offset="30dp"
-        app:icvp_interpolator="@android:anim/accelerate_decelerate_interpolator"
-        app:icvp_max_page_scale="0.8"
-        app:icvp_medium_scaled="false"
-        app:icvp_min_page_scale="0.55"
-        app:icvp_min_page_scale_offset="5dp"
-        app:icvp_scroll_duration="250"/>
+        android:layout_height="400dp"
+        android:background="@color/mainColor">
+
+    </LinearLayout>
+    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:layout_gravity="center_horizontal"
+        android:text="SimpleCount"
+        android:textColor="@color/textColor2"
+        android:textSize="30sp"
+        android:id="@+id/title_txt"
+        />
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="账单名"
+        android:id="@+id/bill_name_txt"
+        android:textSize="30sp"
+        android:textColor="@color/textColor"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="110dp"
+        />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=" ￥"
+        android:id="@+id/money_txt"
+        android:textSize="30sp"
+        android:textColor="#fab434"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="150dp"
+        /></RelativeLayout>
+
+    <com.yarolegovich.discretescrollview.DiscreteScrollView
+        android:id="@+id/picker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:dsv_orientation="horizontal"
+        android:layout_marginTop="50dp"
+        android:layout_gravity="center"
+        ></com.yarolegovich.discretescrollview.DiscreteScrollView>
 
 </FrameLayout>

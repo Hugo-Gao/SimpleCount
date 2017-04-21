@@ -13,7 +13,7 @@ import android.widget.Button;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 
-import com.program.gyf.simplecount.R;
+import com.program.gyf.jianji.R;
 
 /**
  * Created by Administrator on 2016/9/21.

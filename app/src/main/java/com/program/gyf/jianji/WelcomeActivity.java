@@ -1,4 +1,4 @@
-package com.program.gyf.simplecount;
+package com.program.gyf.jianji;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.widget.TextView;
 
 import static tool.SharedPreferenceHelper.isLogging;
@@ -34,10 +35,22 @@ public class WelcomeActivity extends Activity
                     startActivity(intent);
                 }else
                 {
+
                     Intent i = new Intent(WelcomeActivity.this, SignAndLogActivity.class);
-                    String transitionName = "titleShare";
-                    ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(WelcomeActivity.this, Title, transitionName);
-                    startActivity(i, transitionActivityOptions.toBundle());
+                    if(OverLollipop())
+                    {
+                        Log.d("haha", OverLollipop()+"");
+                        Log.d("haha", "系统5.0以上");
+                        String transitionName = "titleShare";
+                        ActivityOptions.makeSceneTransitionAnimation(WelcomeActivity.this, Title, transitionName);
+                        ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(WelcomeActivity.this, Title, transitionName);
+                        startActivity(i, transitionActivityOptions.toBundle());
+                    }else
+                    {
+                        Log.d("haha", "系统5.0以下");
+                        startActivity(i);
+                    }
+
                 }
                 new Thread(new Runnable()//在后台线程中关闭此活动
                 {
@@ -57,5 +70,12 @@ public class WelcomeActivity extends Activity
             }
 
         }, SPLASH_DISPLAY_LENGHT);
+
+
     }
+    private boolean OverLollipop()
+    {
+        return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP);
+    }
+
 }

@@ -10,8 +10,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.program.gyf.simplecount.BillBean;
-import com.program.gyf.simplecount.R;
+import com.program.gyf.jianji.BillBean;
+import com.program.gyf.jianji.R;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.program.gyf.simplecount;
+package com.program.gyf.jianji;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
@@ -31,7 +31,6 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -186,6 +185,21 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         }
     }
 
+    @Override
+    protected void onNewIntent(Intent intent)
+    {
+        super.onNewIntent(intent);
+        if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
+        {
+            saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
+            showRecyclerView();
+        } else
+        {
+            Log.d("haha", "没有从ACtiviyi传入数据");
+        }
+        setIntent(intent);
+    }
+
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
@@ -255,6 +269,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         if (checkFirstLog())
         {
             getBeanFromServer();
+            startHandAnimate(false);
+            closeHandAnimate();
         }
 
         try
@@ -766,13 +782,27 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
     {
-        Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
-        i.putExtra("TheBeanInfo", bean.getDateInfo());
-        i.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-        String transitionName = "PicShare";
-        ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
-        startActivity(i, transitionActivityOptions.toBundle());
-        isdisappear = false;
+        Log.d("haha", OverLollipop() + "");
+        if(OverLollipop())
+        {
+            Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
+            i.putExtra("TheBeanInfo", bean.getDateInfo());
+            i.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+            Log.d("haha", "系统版本号5.0以上");
+            String transitionName = "PicShare";
+            ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
+            isdisappear = false;
+            startActivity(i, transitionActivityOptions.toBundle());
+        }
+        else
+        {
+            Intent i2 = new Intent(AverageBillActivity.this, DetailActivity.class);
+            i2.putExtra("TheBeanInfo", bean.getDateInfo());
+            i2.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+            isdisappear=false;
+            startActivity(i2);
+
+        }
     }
 
 
@@ -1228,6 +1258,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         descripeEditText = (EditText) materialDialog.findViewById(R.id.des_bill_edit);
         final List<String> nameList = SharedPreferenceHelper.getNameFromSharedPreferences(AverageBillActivity.this, SharedPreferenceName, getRealBillNameFromSharedPreferences(this));
         spinner.setItems(nameList);
+        bean.setName(nameList.get(0));
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener()
         {
             @Override
@@ -1730,7 +1761,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private boolean OverLollipop()
     {
-        return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
+        return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP);
     }
 
     private boolean hasPermission(String permission)

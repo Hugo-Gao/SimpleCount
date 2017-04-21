@@ -9,7 +9,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import com.program.gyf.simplecount.R;
+import com.program.gyf.jianji.R;
 
 /**
  * Created by Administrator on 2017/2/28.

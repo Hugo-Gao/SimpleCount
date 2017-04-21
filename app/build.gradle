@@ -6,7 +6,7 @@ android {
 
 
     defaultConfig {
-        applicationId "com.program.gyf.simplecount"
+        applicationId "com.program.gyf.jianji"
         minSdkVersion 17
         targetSdkVersion 24
         versionCode 4
@@ -54,7 +54,7 @@ dependencies {
     compile 'com.android.support.constraint:constraint-layout:1.0.0-alpha8'
     compile 'com.squareup.okhttp3:okhttp:3.2.0'
     compile 'com.squareup.okio:okio:1.7.0'
-    compile 'com.github.devlight:infinitecycleviewpager:1.0.2'
+    compile 'com.yarolegovich:discrete-scrollview:1.1.3'
     compile 'cn.pedant.sweetalert:library:1.3'
     compile 'com.jaredrummler:material-spinner:1.1.0'
     compile 'de.hdodenhof:circleimageview:2.1.0'

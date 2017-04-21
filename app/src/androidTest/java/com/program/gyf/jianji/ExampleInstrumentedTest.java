@@ -1,4 +1,4 @@
-package com.program.gyf.simplecount;
+package com.program.gyf.jianji;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

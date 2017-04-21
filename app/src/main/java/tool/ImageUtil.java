@@ -11,7 +11,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
-import com.program.gyf.simplecount.BillBean;
+import com.program.gyf.jianji.BillBean;
 
 import java.io.File;
 import java.io.FileInputStream;
