@@ -14,6 +14,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.tomer.fadingtextview.FadingTextView;
 import com.yarolegovich.discretescrollview.DiscreteScrollView;
 
 import java.util.ArrayList;
@@ -39,8 +40,8 @@ public class BillListActivity extends Activity
     private String USERNAME;
     private Button returnBtn;
     private TextView titleTxt;
-    private TextView moneyTxt;
-    private TextView billNameTxt;
+    private FadingTextView moneyTxt;
+    private FadingTextView billNameTxt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -61,8 +62,8 @@ public class BillListActivity extends Activity
         titleTxt = (TextView) findViewById(R.id.title_txt);
         Typeface typeface = Typeface.createFromAsset(this.getAssets(), "Pacifico.ttf");
         titleTxt.setTypeface(typeface);
-        moneyTxt = (TextView) findViewById(R.id.money_txt);
-        billNameTxt = (TextView) findViewById(R.id.bill_name_txt);
+        moneyTxt = (FadingTextView) findViewById(R.id.money_txt);
+        billNameTxt = (FadingTextView) findViewById(R.id.bill_name_txt);
         tableListDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
         itemList = getItemList();
         final DiscreteScrollView scrollView =
@@ -84,8 +85,8 @@ public class BillListActivity extends Activity
             @Override
             public void onCurrentItemChanged(@NonNull RecyclerView.ViewHolder viewHolder, int adapterPosition)
             {
-                billNameTxt.setText(itemList.get(adapterPosition).getBillName()+" 支出 :");
-                moneyTxt.setText("￥"+getBillSumMoney(itemList.get(adapterPosition).getBillName())+"");
+                billNameTxt.setTexts(new String[]{itemList.get(adapterPosition).getBillName() + " 支出 :"});
+                moneyTxt.setTexts(new String[]{"￥" + getBillSumMoney(itemList.get(adapterPosition).getBillName()) + ""});
             }
         });
     }

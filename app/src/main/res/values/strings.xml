@@ -3,4 +3,10 @@
     <string name="Title">Simple Count</string>
     <string name="TitleString">Simple Count</string>
     <string name="attentionStirng">请打开侧滑菜单添加账本</string>
+
+    <string-array name="examples">
+        <item>Hello</item>
+        <item>Fading TextView</item>
+    </string-array>
+
 </resources>

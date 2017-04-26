@@ -20,6 +20,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.util.ArraySet;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.widget.DefaultItemAnimator;
@@ -52,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -79,10 +81,14 @@ import static tool.AcivityHelper.finishThisActivity;
 import static tool.ImageUtil.SAVEMINI;
 import static tool.ImageUtil.SAVENOR;
 import static tool.ImageUtil.saveBitmapToSD;
+import static tool.ServerIP.CHECK_ID_EXISTED;
+import static tool.ServerIP.DELETE_SERVER_BILLNAME_URL;
 import static tool.ServerIP.GETBILLSNAMEURL;
 import static tool.ServerIP.GETDATAURL;
+import static tool.ServerIP.HAS_NEW_MESSAGE_URL;
 import static tool.ServerIP.POSTBILLNAMEURL;
 import static tool.ServerIP.POSTURL;
+import static tool.ServerIP.POST_TO_FRIEND_URL;
 import static tool.ServerIP.TESTURL;
 import static tool.SharedPreferenceHelper.SaveNameToSharedPreference;
 import static tool.SharedPreferenceHelper.getNameStringFromSharedPreferences;
@@ -117,9 +123,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private static final int CHOOSE_PHOTO = 2;
     private static final int CROP_PHOTO = 3;
     private static final int CROP_PHOTO2 = 4;
-    public final static int CONNECT_TIMEOUT = 10000;
-    public final static int READ_TIMEOUT = 10000;
-    public final static int WRITE_TIMEOUT = 10000;
+    public final static int CONNECT_TIMEOUT = 10;
+    public final static int READ_TIMEOUT = 10;
+    public final static int WRITE_TIMEOUT = 10;
     public static final String MULTIPART_FORM_DATA = "image/jpg";
     private static String SharedPreferenceName;
     private final String PHOTO_PATH = Environment.getExternalStorageDirectory() + "/ASimpleCount/";
@@ -128,7 +134,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     final BillBean bean = new BillBean();
     private File outputImage;
     private Uri imgUri;
-    private int i;
     private Toolbar toolbar;
     private final String postDataUri = POSTURL;
     private final String getBillsNameUri = GETBILLSNAMEURL;
@@ -137,7 +142,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private final String testUri = TESTURL;
     private TextView titleText;
     private TextView tv_user_name;
-    private Button finish_btn;
+    private Button postToFriendBtn;
     private Button toogleButton;
     private TextView viewAllBillText;
     private boolean refreshFinish;
@@ -145,10 +150,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private static final int FINISHREFRESH = 1;
     private static final int UPDATELIST = 2;
     private static final int START_HAND_ANIMATE = 3;
+    private static final int FINISH_POST_TO_FRIEND = 4;
+    private static final int HAS_NEW_MESSAGE = 5;
     private boolean firstMove = true;
     private boolean startHandAnimateFlag = false;
     private ExecutorService cachedThreadPool;
-
+    private Set<String> messageFromNameSet;
+    private Set<String> billNameFromSet;
     Handler myHandler = new Handler()
     {
         public void handleMessage(Message msg)
@@ -165,25 +173,55 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 case START_HAND_ANIMATE:
                     startHandAnimate(startHandAnimateFlag);
                     break;
+                case FINISH_POST_TO_FRIEND:
+                    SweetAlertDialog dialog = (SweetAlertDialog) msg.obj;
+                    dialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                    dialog.setCancelable(true);
+                    dialog.setTitleText("已经成功发送给朋友");
+                    break;
 
+                case HAS_NEW_MESSAGE:
+                    final SweetAlertDialog hasNewMessageDialog = (SweetAlertDialog) msg.obj;
+                    hasNewMessageDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
+                    StringBuilder showString = new StringBuilder("你收到了来自朋友:");
+                    for (String s : messageFromNameSet)
+                    {
+                        showString.append(s).append(",");
+                    }
+                    showString.deleteCharAt(showString.length() - 1);
+                    showString.append(" 的新帐单,请点击确定接受");
+                    hasNewMessageDialog.setTitleText("你有新消息");
+                    hasNewMessageDialog.setContentText(showString.toString());
+                    hasNewMessageDialog.show();
+                    hasNewMessageDialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+                    {
+                        @Override
+                        public void onClick(SweetAlertDialog sweetAlertDialog)
+                        {
+                            sweetAlertDialog.changeAlertType(SweetAlertDialog.PROGRESS_TYPE);
+                            sweetAlertDialog.setTitleText("正在获取账单，请稍等");
+                            connectServerAndGetMessage(hasNewMessageDialog);
+                        }
+                    });
             }
             super.handleMessage(msg);
         }
     };
 
-    @Override
-    protected void onStop()
+
+    /**
+     * 通知服务器删除needToPush表中的数据，并从
+     */
+    private void connectServerAndGetMessage(SweetAlertDialog dialog)
     {
-        Log.d("haha", "进入onStop方法");
-        super.onStop();
-        if (isdisappear)
+        List<String> billNameList = new ArrayList<>();
+        for (String s : billNameFromSet)
         {
-            finishThisActivity(this);
-        } else
-        {
-            isdisappear = false;
+            billNameList.add(s);
         }
+        getEachBillBeanFromServer(billNameList, dialog,true);
     }
+
 
     @Override
     protected void onNewIntent(Intent intent)
@@ -205,8 +243,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         cachedThreadPool = Executors.newCachedThreadPool();
-        finish_btn = (Button) findViewById(R.id.finish_bill);
-        finish_btn.setOnClickListener(this);
+        postToFriendBtn = (Button) findViewById(R.id.post_to_friend);
+        postToFriendBtn.setOnClickListener(this);
         viewAllBillText = (TextView) findViewById(R.id.view_all_bills);
         viewAllBillText.setOnClickListener(this);
         addBillButton = (FloatingActionButton) findViewById(R.id.floatbutton);
@@ -243,6 +281,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         handText = (TextView) findViewById(R.id.hand_text);
         toogleButton = (Button) findViewById(R.id.toogleButton);
         toogleButton.setOnClickListener(this);
+        messageFromNameSet = new ArraySet<>();
+        billNameFromSet = new ArraySet<>();
         if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
         {
             saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
@@ -258,6 +298,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
         tableNameDBHelper.create(db);
         db.close();
+        final SweetAlertDialog newMessageDialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.NORMAL_TYPE);
         if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
@@ -266,13 +307,17 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             startHandAnimate(true);
         }
+
         if (checkFirstLog())
         {
             getBeanFromServer();
             startHandAnimate(false);
             closeHandAnimate();
+        } else
+        {
+            //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
+            getNewMessage(newMessageDialog);
         }
-
         try
         {
             showRecyclerView();
@@ -280,8 +325,140 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             Log.d("haha", "数据库读取错误");
         }
-        //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
+        //deleteServerBillName();
     }
+
+    private void getNewMessage(final SweetAlertDialog dialog)
+    {
+        Thread thread = new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    while (true)
+                    {
+                        if (checkFirstLog())
+                        {
+                            continue;
+                        }
+
+                        if (USERNAME == null)
+                        {
+                            Log.d("xcc", "用户退出，获取新消息的线程终止");
+                            break;
+                        }
+                        try
+                        {
+                            Thread.sleep(3000);
+                        } catch (InterruptedException e)
+                        {
+                            e.printStackTrace();
+                        }
+                        Log.d("xcc", USERNAME + "检查有无新消息的线程开始工作");
+                        if (dialog.isShowing())
+                        {
+                            break;
+                        }
+                        if (hasNewMessage())
+                        {
+                            if (billNameFromSet.size() == 0)
+                            {
+                                continue;
+                            }
+                            Log.d("xcc", "有新的消息");
+                            Message message = myHandler.obtainMessage();
+                            message.what = HAS_NEW_MESSAGE;
+                            message.obj = dialog;
+                            myHandler.sendMessage(message);
+                        } else
+                        {
+                            Log.d("xcc", "没有新的消息");
+                        }
+                    }
+                } catch (Exception e)
+                {
+                    Log.d("xcc", "用户退出，获取新消息的线程终止");
+                    return;
+                }
+            }
+        });
+        thread.start();
+    }
+
+
+    private boolean hasNewMessage()
+    {
+
+        final int[] hasNew = {-1};
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .readTimeout(2, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(2, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(2, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
+
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        if (USERNAME == null)
+        {
+            return false;
+        }
+        formBuilder.add("username", USERNAME);//USERNAME就是username
+        final Request request = new Request.Builder().url(HAS_NEW_MESSAGE_URL).post(formBuilder.build()).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                hasNew[0] = 0;
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String responseString = response.body().string();
+                Log.d("xcc", responseString);
+                if (responseString.equals("0"))
+                {
+                    hasNew[0] = 0;
+                } else
+                {
+                    hasNew[0] = 1;
+                    messageFromNameSet.clear();
+                    billNameFromSet.clear();
+                    try
+                    {
+                        JSONObject jsonObject = new JSONObject(responseString);
+                        for (int i = 0; i < jsonObject.length(); i++)
+                        {
+                            JSONObject jo = jsonObject.getJSONObject(String.valueOf(i));
+                            messageFromNameSet.add(jo.getString("fromName"));
+                            billNameFromSet.add(jo.getString("billName"));
+                        }
+                    } catch (JSONException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+                Log.d("xcc", messageFromNameSet.toString() + "   " + billNameFromSet.toString());
+
+            }
+        });
+        while (hasNew[0] == -1)
+        {
+
+        }
+
+        if (hasNew[0] == 0)
+        {
+            return false;
+        } else
+        {
+            return true;
+        }
+    }
+
 
     private void deleteAllWebinfo(String billName)
     {
@@ -391,7 +568,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         checkServerConnect();
         List<String> billNameList = getBillList();//获取所有账单名称
         //第一轮
-        postBillNameListToDB(billNameList, USERNAME);//此处将所有账单名称传送到服务器
+        postBillNameListToDB(billNameList, USERNAME, false);//此处将所有账单名称传送到服务器
         final int sumOfAllitems = getAllBillNum();
         final int[] count = {0};
         //第二轮
@@ -604,7 +781,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void checkServerConnect()
     {
-        final boolean[] isConnect = {false};
+        final int[] isConnect = {-1};
         OkHttpClient okHttpClient = new OkHttpClient.Builder()
                 .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
                 .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
@@ -624,6 +801,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     {
                         swipeRefreshLayout.finishRefreshing();
                         Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                        isConnect[0] = 0;
                     }
                 });
             }
@@ -642,17 +820,93 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         {
                             swipeRefreshLayout.finishRefreshing();
                             Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                            isConnect[0] = 0;
                         }
                     });
+                } else
+                {
+                    isConnect[0] = 1;
                 }
             }
         });
     }
 
+    private boolean checkServerConnect(String everything)
+    {
+        final int[] isConnect = {-1};
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
+        Request request = new Request.Builder().url(testUri).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        swipeRefreshLayout.finishRefreshing();
+                        Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                        isConnect[0] = 0;
+                    }
+                });
+            }
 
-    private void postBillNameListToDB(final List<String> billNameList, String UserName)//一次多波向服务器传送数据
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String JSONString = response.body().string();
+                Log.d("net", JSONString);
+                if (!JSONString.equals("success"))
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            swipeRefreshLayout.finishRefreshing();
+                            Toast.makeText(AverageBillActivity.this, "未连接服务器", Toast.LENGTH_SHORT).show();
+                            isConnect[0] = 0;
+                        }
+                    });
+                } else
+                {
+                    isConnect[0] = 1;
+                }
+            }
+        });
+
+        while (isConnect[0] == -1)
+        {
+
+        }
+        if(isConnect[0]==1)
+        {
+            return true;
+        }else
+        {
+            return false;
+        }
+    }
+
+
+    private void postBillNameListToDB(final List<String> billNameList, String UserName, boolean needPush)//一次多波向服务器传送数据
     {
 
+        String push;
+        if (needPush)
+        {
+            push = "yes";
+        } else
+        {
+            push = "no";
+        }
         final int[] count = {0};
         for (final String billName : billNameList)
         {
@@ -661,11 +915,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
                     .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
                     .build();
-            String touristsString = getNameStringFromSharedPreferences(this, UserName, billName);
+            String touristsString = getNameStringFromSharedPreferences(this, SharedPreferenceName, billName);
+
             FormBody.Builder formBuilder = new FormBody.Builder();
             formBuilder.add("billName", billName);
             formBuilder.add("userName", UserName);
             formBuilder.add("touristsString", touristsString);
+            formBuilder.add("needPush", push);
+            formBuilder.add("fromName", USERNAME);
             Request request = new Request.Builder().url(postBillNameListUri).post(formBuilder.build()).build();
             Call call = client.newCall(request);
             call.enqueue(new Callback()
@@ -748,7 +1005,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             @Override
             public void onItemClick(View view, BillBean bean, ImageView imageView)
             {
-                if(!drawerLayout.isDrawerOpen(GravityCompat.START))
+                if (!drawerLayout.isDrawerOpen(GravityCompat.START))
                 {
                     intentToDetailActivity(bean, imageView);
                 }
@@ -783,7 +1040,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
     {
         Log.d("haha", OverLollipop() + "");
-        if(OverLollipop())
+        if (OverLollipop())
         {
             Intent i = new Intent(AverageBillActivity.this, DetailActivity.class);
             i.putExtra("TheBeanInfo", bean.getDateInfo());
@@ -793,13 +1050,12 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             ActivityOptions transitionActivityOptions = ActivityOptions.makeSceneTransitionAnimation(AverageBillActivity.this, imageView, transitionName);
             isdisappear = false;
             startActivity(i, transitionActivityOptions.toBundle());
-        }
-        else
+        } else
         {
             Intent i2 = new Intent(AverageBillActivity.this, DetailActivity.class);
             i2.putExtra("TheBeanInfo", bean.getDateInfo());
             i2.putExtra("BillName", getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-            isdisappear=false;
+            isdisappear = false;
             startActivity(i2);
 
         }
@@ -892,7 +1148,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         saveBillNameToDB(billName);
                         SaveNameToSharedPreference(AverageBillActivity.this, tourists, SharedPreferenceName, billName);
                     }
-                    getEachBillBeanFromServer(billsName, touristsMap, pDialog);
+                    getEachBillBeanFromServer(billsName, pDialog,false);
                 } catch (Exception e)
                 {
                     e.printStackTrace();
@@ -907,14 +1163,17 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      * 获取到了所有帐单名，此方法将每个账单每条信息从服务器中取出来
      *
      * @param billsName
-     * @param touristsMap
      * @param pDialog
      */
-    private void getEachBillBeanFromServer(final List<String> billsName, HashMap<String, String> touristsMap, final SweetAlertDialog pDialog)
+    private void getEachBillBeanFromServer(final List<String> billsName, final SweetAlertDialog pDialog ,boolean fromNews)
     {
         final int[] count = {0};
         for (final String billName : billsName)
         {
+            if(fromNews)
+            {
+                saveBillNameToDB(billName);
+            }
             OkHttpClient client = new OkHttpClient.Builder()
                     .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
                     .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
@@ -952,6 +1211,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     Log.d("timelog", "开始获取");
                     String JSONString = response.body().string();
+                    Log.d("jsonLog", JSONString);
                     /**
                      * 客户端返回认为这是新用户
                      */
@@ -1004,11 +1264,24 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                     @Override
                                                     public void run()
                                                     {
-                                                        pDialog.changeAlertType(SweetAlertDialog.SUCCESS_TYPE);
-                                                        pDialog.setTitleText("获取数据成功");
-                                                        pDialog.show();
+                                                        pDialog.dismiss();
+                                                        final SweetAlertDialog dialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.SUCCESS_TYPE);
+                                                        dialog.setTitleText("获取数据成功");
                                                         saveRealBillNameToSharedPreferences(AverageBillActivity.this, billsName.get(0));
+                                                        dialog.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener()
+                                                        {
+                                                            @Override
+                                                            public void onClick(SweetAlertDialog sweetAlertDialog)
+                                                            {
+                                                                dialog.dismiss();
+                                                            }
+                                                        });
+                                                        dialog.show();
                                                         showRecyclerView();
+                                                        if (billNameFromSet.size() != 0)
+                                                        {
+                                                            deleteServerBillName();
+                                                        }
                                                     }
                                                 });
                                             } else
@@ -1041,6 +1314,44 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             });
         }
 
+    }
+
+    /**
+     * 删除服务器上needToPush表
+     */
+    private void deleteServerBillName()
+    {
+        Log.d("haha", "开始通知服务器删除待传数据");
+        billNameFromSet.clear();
+        OkHttpClient client = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        formBuilder.add("username", USERNAME);
+        final Request request = new Request.Builder().url(DELETE_SERVER_BILLNAME_URL).post(formBuilder.build()).build();
+        Call call = client.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String res = response.body().string();
+                if (res.equals("success"))
+                {
+                    Log.d("haha", "删除数据成功");
+                }else {
+                    Log.d("haha", "删除数据失败");
+                }
+            }
+        });
     }
 
     /**
@@ -1126,6 +1437,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                             saveRealBillNameToSharedPreferences(AverageBillActivity.this, "");
                             setLoggingStatus(AverageBillActivity.this, false);
                             Intent intent = new Intent(AverageBillActivity.this, SignAndLogActivity.class);
+                            USERNAME=null;
                             startActivity(intent);
                             AverageBillActivity.this.finish();
                         }
@@ -1194,11 +1506,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     drawerLayout.closeDrawers();
                 }
                 break;
-            case R.id.finish_bill:
-                finishBill();
 
-                //这儿
-                break;
             case R.id.view_all_bills:
                 if (getBillList().size() > 0)
                 {
@@ -1213,9 +1521,312 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     dialog.show();
                 }
                 break;
+            case R.id.post_to_friend:
+
+                ItemAnimition.confirmAndBigger(postToFriendBtn);
+                CheckInfoCorrect(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
+                break;
         }
     }
 
+
+    /**
+     * 检验输入信息的合法性
+     *
+     * @param billName
+     */
+    private void CheckInfoCorrect(final String billName)
+    {
+        final WonderfulDialog inputNameDialog = new tool.WonderfulDialog(this, R.style.Dialog, R.layout.post_to_friend_layout, 250, 300);
+        inputNameDialog.setCancelable(true);
+        inputNameDialog.show();
+
+        final FloatingActionButton confirmBtn = (FloatingActionButton) inputNameDialog.findViewById(R.id.confirmButton);
+        final EditText editText = (EditText) inputNameDialog.findViewById(R.id.friend_name);
+        confirmBtn.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                String friendID = editText.getText().toString();
+                ItemAnimition.confirmAndBigger(v);
+                if (friendID.equals(""))
+                {
+                    Toast.makeText(AverageBillActivity.this, "请先输入朋友的账号", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                postThisBillToFriend(billName, friendID);
+                inputNameDialog.dismiss();
+            }
+        });
+    }
+
+    /**
+     * 发送此账单给朋友
+     *
+     * @param billName   待发送账单名称
+     * @param friendName 朋友ID
+     */
+    private void postThisBillToFriend(final String billName, final String friendName)
+    {
+        final List<BillBean> beanList = getBeanFromDataBase(billName);
+
+        final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
+        dialog.setTitleText("正在发送账单,请稍等");
+        dialog.setCancelable(false);
+        dialog.show();
+        checkServerConnect(dialog);
+        if (beanList.size() == 0)
+        {
+            dialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
+            dialog.setTitleText("你的账单为空，请先创建账单");
+        }
+        if (dialog.getAlerType() == SweetAlertDialog.ERROR_TYPE || dialog.getAlerType() == SweetAlertDialog.WARNING_TYPE)
+        {
+            return;
+        }
+
+        final int sumOfBill = beanList.size();
+        final int[] count = {0};
+        cachedThreadPool.execute(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+
+                if (!checkIDExisted(friendName, dialog))//检验输入ID合法性
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            dialog.changeAlertType(SweetAlertDialog.WARNING_TYPE);
+                            dialog.setTitleText("经服务器查询,没有此用户");
+                        }
+                    });
+                    return;
+                }
+                List<String> list = new ArrayList<>();
+                list.add(billName);
+                postBillNameListToDB(list, friendName, true);
+                for (int i = 0; i < beanList.size(); i++)
+                {
+                    final int finalI = i;
+                    cachedThreadPool.execute(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            final String threadName = Thread.currentThread().getName();
+                            Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务");
+                            OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                                    .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                                    .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                                    .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                                    .build();
+
+                            FormBody.Builder formBuilder = new FormBody.Builder();
+                            formBuilder.add("username", friendName);//USERNAME就是username
+                            formBuilder.add("billname", billName);
+                            formBuilder.add("name", beanList.get(finalI).getName());
+                            formBuilder.add("money", beanList.get(finalI).getMoneyString());
+                            formBuilder.add("describe", beanList.get(finalI).getDescripInfo());
+                            formBuilder.add("date", beanList.get(finalI).getDateInfo());
+
+                            final String[] webUri = {null};
+                            final String[] miniWebUri = {null};
+                            if (beanList.get(finalI).getWebUri() == null)//上传原图
+                            {
+                                Log.d("haha", "向SM图床获取地址");
+                                cachedThreadPool.execute(new Runnable()
+                                {
+                                    @Override
+                                    public void run()
+                                    {
+                                        Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务 ->webUri");
+                                        webUri[0] = getWebUriFromSM(beanList.get(finalI).getPicadress());
+                                    }
+                                });
+                            } else
+                            {
+                                webUri[0] = beanList.get(finalI).getWebUri();
+                            }
+                            if (beanList.get(finalI).getMiniWebUri() == null)
+                            {
+                                cachedThreadPool.execute(new Runnable()
+                                {
+                                    @Override
+                                    public void run()
+                                    {
+                                        Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务 ->miniwebUri");
+                                        miniWebUri[0] = getWebUriFromSM(beanList.get(finalI).getMiniPicAddress());
+                                    }
+                                });
+                            } else
+                            {
+                                miniWebUri[0] = beanList.get(finalI).getMiniWebUri();
+                            }
+                            while (webUri[0] == null || miniWebUri[0] == null)
+                            {
+                                try
+                                {
+                                    sleep(200);
+                                } catch (InterruptedException e)
+                                {
+                                    e.printStackTrace();
+                                }
+                            }
+                            beanList.get(finalI).setMiniWebUri(miniWebUri[0]);
+                            beanList.get(finalI).setWebUri(webUri[0]);
+                            saveWebInfoToDataBase(billName, beanList.get(finalI));
+                            formBuilder.add("picuri", beanList.get(finalI).getWebUri());
+                            formBuilder.add("minipicuri", beanList.get(finalI).getMiniWebUri());
+                            Log.d("xcc", threadName + "线程工作完毕");
+                            Request request = new Request.Builder().url(POST_TO_FRIEND_URL).post(formBuilder.build()).build();
+                            Call call = okHttpClient.newCall(request);
+                            call.enqueue(new Callback()
+                            {
+                                @Override
+                                public void onFailure(Call call, final IOException e)
+                                {
+                                    count[0]++;
+                                    Log.d("haha", finalI + "个数据失败");
+
+                                }
+
+                                @Override
+                                public void onResponse(Call call, Response response) throws IOException
+                                {
+
+                                    String responseString = response.body().string();
+                                    count[0]++;
+                                    Log.d("haha", "当前同步完成" + count[0] + "个条目");
+                                    if (count[0] == sumOfBill)
+                                    {
+                                        Log.d("haha", "已经发送给朋友");
+                                        Message message = new Message();
+                                        message.what = FINISH_POST_TO_FRIEND;
+                                        message.obj = dialog;
+                                        myHandler.sendMessage(message);
+                                    }
+                                }
+                            });
+
+                        }
+                    });
+                }
+            }
+        });
+
+
+    }
+
+    private boolean checkIDExisted(String friendName, SweetAlertDialog dialog)
+    {
+        Log.d("haha", "正在检验用户ID合法性");
+        final int[] isExisted = {-1};
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
+        FormBody.Builder formBuilder = new FormBody.Builder();
+        formBuilder.add("username", friendName);//USERNAME就是username
+        Request request = new Request.Builder().url(CHECK_ID_EXISTED).post(formBuilder.build()).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                final String res = response.body().string();
+                if (res.equals("0"))
+                {
+                    isExisted[0] = 0;
+                } else if (res.equals("1"))
+                {
+                    isExisted[0] = 1;
+                } else
+                {
+                    isExisted[0] = 0;
+                }
+            }
+        });
+
+        while (isExisted[0] == -1)
+        {
+
+        }
+        if (isExisted[0] == 0)
+        {
+            return false;
+        } else
+        {
+            return true;
+        }
+    }
+
+
+    private void checkServerConnect(final SweetAlertDialog dialog)
+    {
+        final int[] isConnect = {-1};
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
+                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
+                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                .build();
+        Request request = new Request.Builder().url(testUri).build();
+        Call call = okHttpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                runOnUiThread(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        swipeRefreshLayout.finishRefreshing();
+                        isConnect[0] = 0;
+                        dialog.changeAlertType(SweetAlertDialog.ERROR_TYPE);
+                        dialog.setTitleText("服务器未连接");
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                String JSONString = response.body().string();
+                Log.d("net", JSONString);
+                if (!JSONString.equals("success"))
+                {
+                    runOnUiThread(new Runnable()
+                    {
+                        @Override
+                        public void run()
+                        {
+                            swipeRefreshLayout.finishRefreshing();
+                            isConnect[0] = 0;
+                            dialog.changeAlertType(SweetAlertDialog.ERROR_TYPE);
+                            dialog.setTitleText("服务器未连接");
+                        }
+                    });
+                } else
+                {
+                    isConnect[0] = 1;
+                }
+            }
+        });
+    }
 
     private void intentToBillListActivity()
     {
@@ -1223,13 +1834,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         startActivity(intent);
     }
 
-    /**
-     * 完成一个账单
-     */
-    private void finishBill()
-    {
-
-    }
 
     private void addBill()
     {
@@ -1689,7 +2293,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Cursor cursor = null;
         try
         {
-             cursor = db.query(BillName, null, null, null, null, null, null);
+            cursor = db.query(BillName, null, null, null, null, null, null);
             if (cursor != null)
             {
                 String[] columns = cursor.getColumnNames();
@@ -1738,7 +2342,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
         } catch (Exception e)
         {
-            Log.d("haha","数据库读取错误");
+            Log.d("haha", "数据库读取错误");
         } finally
         {
             if (cursor != null)
@@ -1764,10 +2368,15 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         return (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP);
     }
 
+    private boolean OverMashmallow()
+    {
+        return (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
+    }
+
     private boolean hasPermission(String permission)
     {
 
-        if (OverLollipop())
+        if (OverMashmallow())
         {
 
             return (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
@@ -1815,4 +2424,21 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Log.d("haha", "共有" + sumofbill + "个bill");
         return sumofbill;
     }
+
+
+    @Override
+    protected void onStop()
+    {
+        Log.d("haha", "进入onStop方法");
+        super.onStop();
+        if (isdisappear)
+        {
+            finishThisActivity(this);
+        } else
+        {
+            isdisappear = false;
+        }
+    }
+
+
 }

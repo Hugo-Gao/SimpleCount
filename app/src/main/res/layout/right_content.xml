@@ -38,7 +38,7 @@
                 />
 
             <Button
-                android:id="@+id/finish_bill"
+                android:id="@+id/post_to_friend"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:layout_marginBottom="30dp"

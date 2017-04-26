@@ -38,21 +38,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal">
-    <TextView
+    <com.tomer.fadingtextview.FadingTextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="账单名"
+        app:texts="@array/examples"
         android:id="@+id/bill_name_txt"
         android:textSize="30sp"
         android:textColor="@color/textColor"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="110dp"
         />
-    <TextView
+    <com.tomer.fadingtextview.FadingTextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=" ￥"
         android:id="@+id/money_txt"
+        app:texts="@array/examples"
         android:textSize="30sp"
         android:textColor="#fab434"
         android:layout_gravity="center_horizontal"

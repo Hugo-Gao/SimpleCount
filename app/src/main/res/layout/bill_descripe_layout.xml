@@ -29,7 +29,7 @@
             android:textColor="@color/textColor"
             android:layout_gravity="center_horizontal"
             android:hint="请描述"
-            android:textColorHint="@color/textColor"
+            android:textColorHint="#BDBDBD"
             />
 
 
@@ -40,7 +40,7 @@
             android:textColor="@color/textColor"
             android:layout_gravity="center_horizontal"
             android:hint="请输入金额"
-            android:textColorHint="@color/textColor"
+            android:textColorHint="#BDBDBD"
             android:inputType="numberDecimal"
             />
 
