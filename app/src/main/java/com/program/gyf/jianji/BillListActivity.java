@@ -106,9 +106,9 @@ public class BillListActivity extends Activity
     private int getBillSumMoney(String BillName)
     {
         int moneySum=0;
-        dbHelper = new DBOpenHelper(BillListActivity.this, "BillData.db", null, 1, BillName);
+        dbHelper = new DBOpenHelper(BillListActivity.this, "BillData.db", null, 1, BillName,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(BillName,null, null, null, null, null, null);
+        Cursor cursor = db.query(BillName+USERNAME,null, null, null, null, null, null);
         if(cursor!=null)
         {
             while(cursor.moveToNext())
@@ -153,9 +153,9 @@ public class BillListActivity extends Activity
     private String getOnePicFromBill(String name)
     {
         String picInfo = null;
-        dbHelper = new DBOpenHelper(BillListActivity.this, "BillData.db", null, 1, name);
+        dbHelper = new DBOpenHelper(BillListActivity.this, "BillData.db", null, 1, name,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(name, null, "_id = ?", new String[]{"1"}, null, null, null);
+        Cursor cursor = db.query(name+USERNAME, null, "_id = ?", new String[]{"1"}, null, null, null);
         while (cursor.moveToNext())
         {
             picInfo = cursor.getString(cursor.getColumnIndex("picadress"));

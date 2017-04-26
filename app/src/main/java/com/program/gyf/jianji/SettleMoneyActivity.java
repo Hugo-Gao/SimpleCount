@@ -28,6 +28,7 @@ import java.util.Map;
 import cn.pedant.SweetAlert.SweetAlertDialog;
 import database.DBOpenHelper;
 import tool.AcivityHelper;
+import tool.SharedPreferenceHelper;
 
 import static tool.SharedPreferenceHelper.getNameFromSharedPreferences;
 import static tool.SharedPreferenceHelper.getTableNameBySP;
@@ -49,6 +50,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
     private FloatingActionButton FAB;
     private String BillName;
     private Button finishBtn;
+    private String USERNAME ;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -56,7 +58,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         getWindow().requestFeature(Window.FEATURE_CONTENT_TRANSITIONS);
         String transition = getIntent().getStringExtra("transition");
         BillName = getIntent().getStringExtra("BillName");
-
+        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);
         switch (transition)
         {
             case "fade":
@@ -73,7 +75,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
             personBillMap = new HashMap<>();
         TABLENAME = getTableNameBySP(SettleMoneyActivity.this);
         SPName = TABLENAME;
-        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1,TABLENAME);
+        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1,TABLENAME,USERNAME);
         moneynumText = (TextView) findViewById(R.id.bill_sum);
         showInformation();
         Log.d("haha", "person num is " + personBillMap.size());
@@ -105,7 +107,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
         moneyAver = moneySum / nameLsit.size();
         for (String name: nameLsit)
         {
-            Cursor cursor=db.query(BillName,null,"name = ?",new String[]{name},null, null, null);
+            Cursor cursor=db.query(BillName+USERNAME,null,"name = ?",new String[]{name},null, null, null);
             while (cursor.moveToNext())
             {
                 money+=cursor.getInt(cursor.getColumnIndex("money"));
@@ -152,10 +154,10 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
          moneySum=0;
         int billcount=0;
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(BillName, null, null, null, null, null, null);
+        Cursor cursor = db.query(BillName+USERNAME, null, null, null, null, null, null);
         billcount=cursor.getCount();
         cursor.close();
-        cursor = db.query(BillName,null, null, null, null, null, null);
+        cursor = db.query(BillName+USERNAME,null, null, null, null, null, null);
         if(cursor!=null)
         {
             while(cursor.moveToNext())
@@ -242,6 +244,7 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
     {
         saveRealBillNameToSharedPreferences(this,"");
         Intent intent = new Intent(this, AverageBillActivity.class);
+        intent.putExtra("settleDown", true);
         startActivity(intent);
         AcivityHelper.finishThisActivity(this);
     }
@@ -264,7 +267,8 @@ public class SettleMoneyActivity extends Activity implements View.OnClickListene
             @Override
             public void onAnimationEnd(Animator animation)
             {
-                Intent intent = new Intent(SettleMoneyActivity.this,AverageBillActivity.class);
+                Intent intent = new Intent(SettleMoneyActivity.this, AverageBillActivity.class);
+                intent.putExtra("settleDown", true);
                 startActivity(intent);
                 SettleMoneyActivity.this.finish();
 

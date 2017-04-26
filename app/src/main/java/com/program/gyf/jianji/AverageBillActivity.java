@@ -157,6 +157,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private ExecutorService cachedThreadPool;
     private Set<String> messageFromNameSet;
     private Set<String> billNameFromSet;
+    private Set<String> touristSet;
     Handler myHandler = new Handler()
     {
         public void handleMessage(Message msg)
@@ -220,6 +221,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             billNameList.add(s);
         }
         getEachBillBeanFromServer(billNameList, dialog,true);
+
     }
 
 
@@ -283,6 +285,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         toogleButton.setOnClickListener(this);
         messageFromNameSet = new ArraySet<>();
         billNameFromSet = new ArraySet<>();
+        touristSet = new ArraySet<>();
         if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
         {
             saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
@@ -291,6 +294,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             Log.d("haha", "没有从ACtiviyi传入数据");
         }
+
+
         USERNAME = getTableNameBySP(this);//以用户名作为表名
         Log.d("haha", "用户名" + USERNAME);
         SharedPreferenceName = USERNAME;
@@ -298,21 +303,22 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
         tableNameDBHelper.create(db);
         db.close();
+        layoutManager = new LinearLayoutManager(this);
+        recyclerView.setLayoutManager(layoutManager);
         final SweetAlertDialog newMessageDialog = new SweetAlertDialog(AverageBillActivity.this, SweetAlertDialog.NORMAL_TYPE);
+        if(getBillList().size()>0&&!intent.hasExtra("settleDown"))
+        {
+            saveRealBillNameToSharedPreferences(this, getBillList().get(0));
+        }
         if (!getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
-            closeHandAnimate();
-        } else
-        {
-            startHandAnimate(true);
         }
 
         if (checkFirstLog())
         {
             getBeanFromServer();
-            startHandAnimate(false);
-            closeHandAnimate();
+
         } else
         {
             //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
@@ -327,6 +333,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         }
         //deleteServerBillName();
     }
+
+
 
     private void getNewMessage(final SweetAlertDialog dialog)
     {
@@ -351,7 +359,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         }
                         try
                         {
-                            Thread.sleep(3000);
+                            Thread.sleep(10000);
                         } catch (InterruptedException e)
                         {
                             e.printStackTrace();
@@ -462,17 +470,17 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private void deleteAllWebinfo(String billName)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
         try
         {
             values.put("weburi", (String) null);
-            db.update(billName, values, "_id>?", new String[]{"0"});
+            db.update(billName+USERNAME, values, "_id>?", new String[]{"0"});
             values.clear();
             values.put("miniweburi", (String) null);
-            db.update(billName, values, "_id>?", new String[]{"0"});
+            db.update(billName+USERNAME, values, "_id>?", new String[]{"0"});
         } catch (Exception e)
         {
             e.printStackTrace();
@@ -541,7 +549,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private boolean checkFirstLog()
     {
         SQLiteDatabase db = tableNameDBHelper.getWritableDatabase();
-        Log.d("haha", "用户在本机第一次登录");
+        Log.d("first", "用户在本机第一次登录");
         Cursor cursor = db.query(USERNAME + "TableList", null, null, null, null, null, null);
         if (cursor.getCount() == 0)
         {
@@ -589,9 +597,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         Log.d("xcc", "线程：" + threadName + ",正在执行第" + finalI + "个任务");
                         OkHttpClient mOkHttpClient =
                                 new OkHttpClient.Builder()
-                                        .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)//设置读取超时时间
-                                        .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)//设置写的超时时间
-                                        .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)//设置连接超时时间
+                                        .readTimeout(1000, TimeUnit.SECONDS)//设置读取超时时间
+                                        .writeTimeout(1000, TimeUnit.SECONDS)//设置写的超时时间
+                                        .connectTimeout(1000, TimeUnit.SECONDS)//设置连接超时时间
                                         .build();
 
                         FormBody.Builder formBuilder = new FormBody.Builder();
@@ -715,9 +723,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         final okhttp3.OkHttpClient.Builder httpBuilder = new OkHttpClient.Builder();
         OkHttpClient okHttpClient = httpBuilder
                 //设置超时
-                .connectTimeout(CONNECT_TIMEOUT, TimeUnit.SECONDS)
-                .writeTimeout(WRITE_TIMEOUT, TimeUnit.SECONDS)
-                .readTimeout(READ_TIMEOUT, TimeUnit.SECONDS)
+                .connectTimeout(1000, TimeUnit.SECONDS)
+                .writeTimeout(1000, TimeUnit.SECONDS)
+                .readTimeout(1000, TimeUnit.SECONDS)
                 .build();
 
         okHttpClient.newCall(request).enqueue(new Callback()
@@ -978,6 +986,22 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private void notifyRecyclerViewUpdate()
     {
+        if (adapter == null)
+        {
+            adapter = new CardViewAdapter(beanList, this);
+            adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
+            {
+                @Override
+                public void onItemClick(View view, BillBean bean, ImageView imageView)
+                {
+                    if (!drawerLayout.isDrawerOpen(GravityCompat.START))
+                    {
+                        intentToDetailActivity(bean, imageView);
+                    }
+                }
+            });
+            recyclerView.setAdapter(adapter);
+        }
         adapter.addItem(0, bean);
         Log.d("haha", "插入动画执行");
         recyclerView.scrollToPosition(0);
@@ -991,14 +1015,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     {
         if (getRealBillNameFromSharedPreferences(AverageBillActivity.this).equals(""))
         {
+            startHandAnimate(true);
             return;
         }
         Log.d("haha", "showRecyclerView()当前billList" + getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         beanList = getBeanFromDataBase(getRealBillNameFromSharedPreferences(this));
         Log.d("haha", "数据库里有" + beanList.size() + "条数据");
-        layoutManager = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(layoutManager);
+
         adapter = new CardViewAdapter(beanList, this);
         adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
         {
@@ -1015,7 +1039,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         final DefaultItemAnimator animator = new DefaultItemAnimator();
         recyclerView.setItemAnimator(animator);
         recyclerView.getItemAnimator().setAddDuration(500);
-
+        if (beanList.size() > 0)
+        {
+            startHandAnimate(false);
+            closeHandAnimate();
+        }else
+        {
+            startHandAnimate(true);
+        }
         /*recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
         {
             @Override
@@ -1165,7 +1196,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      * @param billsName
      * @param pDialog
      */
-    private void getEachBillBeanFromServer(final List<String> billsName, final SweetAlertDialog pDialog ,boolean fromNews)
+    private void getEachBillBeanFromServer(final List<String> billsName, final SweetAlertDialog pDialog , final boolean fromNews)
     {
         final int[] count = {0};
         for (final String billName : billsName)
@@ -1252,6 +1283,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                         beanObject = object.getJSONObject(String.valueOf(finalI));
                                         Log.d("haha", "从JSon中取出" + beanObject.getString("date"));
                                         BillBean bean = handleJsonToBean(beanObject);
+                                        touristSet.add(bean.getName());
                                         saveBeanToDataBase(billName, bean);
                                         countOfEachBillBean[0]++;
                                         if (countOfEachBillBean[0] == sumOfEachBillBean[0])
@@ -1259,6 +1291,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                             count[0]++;
                                             if (count[0] == billsName.size())
                                             {
+                                                if(fromNews)
+                                                {
+                                                    String tourists="";
+                                                    for (String s : touristSet)
+                                                    {
+                                                        tourists=tourists.concat("," + s);
+
+                                                    }
+                                                    StringBuilder s=new StringBuilder(tourists);
+                                                    s.deleteCharAt(0);
+                                                    SaveNameToSharedPreference(AverageBillActivity.this,s.toString(),SharedPreferenceName,billName);
+                                                }
                                                 runOnUiThread(new Runnable()
                                                 {
                                                     @Override
@@ -2072,7 +2116,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     private synchronized void saveBeanToDataBase(String billName)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
@@ -2086,7 +2130,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("weburi", bean.getWebUri());
         values.put("miniweburi", bean.getMiniWebUri());
 
-        db.insert(billName, null, values);
+        db.insert(billName+USERNAME, null, values);
         Log.d("haha", "成功存入" + bean.toString());
         values.clear();
         db.close();
@@ -2161,7 +2205,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                 , nameString, SharedPreferenceName, billName);
                                         materialDialog.dismiss();
                                         titleText.setText(billName);
-                                        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName);
+                                        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, billName,USERNAME);
                                         SQLiteDatabase db = dbHelper.getWritableDatabase();
                                         dbHelper.createTable(db);
                                         db.close();
@@ -2206,7 +2250,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private synchronized void saveWebInfoToDataBase(String BillName, BillBean bean)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
@@ -2214,7 +2258,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("miniweburi", bean.getMiniWebUri());
         try
         {
-            db.update(BillName, values, "date=?", new String[]{bean.getDateInfo()});
+            db.update(BillName+USERNAME, values, "date=?", new String[]{bean.getDateInfo()});
             Log.d("haha", "成功存入" + bean.toString() + "web数据");
         } finally
         {
@@ -2226,7 +2270,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void saveBeanToDataBase(String BillName, BillBean bean)
     {
 
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName,USERNAME);
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         dbHelper.createTable(db);
         ContentValues values = new ContentValues();
@@ -2238,7 +2282,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         values.put("minipicadress", bean.getMiniPicAddress());
         values.put("weburi", bean.getWebUri());
         values.put("miniweburi", bean.getMiniWebUri());
-        db.insert(BillName, null, values);
+        db.insert(BillName+USERNAME, null, values);
         Log.d("haha", BillName + "成功存入" + bean.toString() + "的完整数据");
         values.clear();
         db.close();
@@ -2287,13 +2331,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
      */
     public List<BillBean> getBeanFromDataBase(String BillName)
     {
-        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName);
+        dbHelper = new DBOpenHelper(AverageBillActivity.this, "BillData.db", null, 1, BillName,USERNAME);
         List<BillBean> beanList = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         Cursor cursor = null;
         try
         {
-            cursor = db.query(BillName, null, null, null, null, null, null);
+            cursor = db.query(BillName+USERNAME, null, null, null, null, null, null);
             if (cursor != null)
             {
                 String[] columns = cursor.getColumnNames();

@@ -6,7 +6,7 @@ package tool;
 
 public  class ServerIP
 {
-    private static final String HOST = "192.168.253.1:8060";
+    private static final String HOST = "120.25.232.120:8070";
 
     public static final String LOGURL="http://"+HOST+"/user";
     public static final String SIGNURL="http://"+HOST+"/register";

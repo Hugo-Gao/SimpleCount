@@ -13,10 +13,10 @@ public class DBOpenHelper extends SQLiteOpenHelper
 {
     private String TABLENAME;
 
-    public DBOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version,String TableName)
+    public DBOpenHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version,String TableName,String USERNAME)
     {
         super(context, name, factory, version);
-        TABLENAME = TableName;
+        TABLENAME = TableName+USERNAME;
     }
 
     /**

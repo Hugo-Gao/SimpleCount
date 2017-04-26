@@ -31,6 +31,7 @@ public class DetailActivity extends Activity
     public String TABLENAME;
     private String BillName;
     private ScrollView scrollView;
+    private String USERNAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -44,6 +45,7 @@ public class DetailActivity extends Activity
         dateText = (TextView) findViewById(R.id.date_bill);
         scrollView = (ScrollView) findViewById(R.id.scrollView1);
         final float[] y = {0};
+        USERNAME = SharedPreferenceHelper.getTableNameBySP(this);
         scrollView.setOnTouchListener(new View.OnTouchListener()
         {
             @Override
@@ -76,7 +78,7 @@ public class DetailActivity extends Activity
         TABLENAME = SharedPreferenceHelper.getTableNameBySP(DetailActivity.this);
         Intent intent = getIntent();
         BillName = intent.getStringExtra("BillName");
-        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1, BillName);
+        dbHelper = new DBOpenHelper(this, "BillData.db", null, 1, BillName,USERNAME);
         String beanInfo = intent.getStringExtra("TheBeanInfo");
         BillBean bean = SearchBeanByDateInfo(beanInfo);
         if (bean.getPicadress() != null)
@@ -113,7 +115,7 @@ public class DetailActivity extends Activity
     {
         BillBean bean = new BillBean();
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        Cursor cursor = db.query(BillName, null, "date=?", new String[]{beanInfo}, null, null,
+        Cursor cursor = db.query(BillName+USERNAME, null, "date=?", new String[]{beanInfo}, null, null,
                 null);
         if (cursor != null)
         {
