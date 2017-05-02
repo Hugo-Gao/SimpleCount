@@ -9,7 +9,7 @@ android {
         applicationId "com.program.gyf.jianji"
         minSdkVersion 17
         targetSdkVersion 24
-        versionCode 4
+        versionCode 5
         versionName "2.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         renderscriptTargetApi 19
@@ -52,7 +52,7 @@ dependencies {
     compile 'id.zelory:compressor:1.0.3'
     compile 'com.lcodecorex:tkrefreshlayout:1.0.6'
     compile 'com.android.support.constraint:constraint-layout:1.0.0-alpha8'
-    compile 'com.squareup.okhttp3:okhttp:3.2.0'
+    compile 'com.squareup.okhttp3:okhttp:3.5.0'
     compile 'com.tomer:fadingtextview:1.8.1'
     compile 'com.squareup.okio:okio:1.7.0'
     compile 'com.yarolegovich:discrete-scrollview:1.1.3'

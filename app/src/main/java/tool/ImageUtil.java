@@ -8,7 +8,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.os.Environment;
 import android.util.Log;
 
 import com.program.gyf.jianji.BillBean;
@@ -34,16 +33,24 @@ public class ImageUtil
 
     public static int SAVENOR=3;
 
+
     private ImageUtil()
     {
 
 
     }
 
-    public static boolean saveBitmapToSD(Bitmap bmp, BillBean bean,int way)
+    /**
+     *
+     * @param bmp 图像
+     * @param bean  bean对象
+     * @param way 储存什么对象 ： SAVENOR 原图; SAVEMINI小图.
+     * @return 储存是否成功
+     */
+    public static boolean saveBitmapToSD(Bitmap bmp, BillBean bean,int way,File Photo_file)
     {
 
-        File appDir = new File(Environment.getExternalStorageDirectory() + "/ASimpleCount/");
+        File appDir = Photo_file;
         if (!appDir.exists()) {
             appDir.mkdir();
             Log.d("haha","不存在路径,创建一个");
