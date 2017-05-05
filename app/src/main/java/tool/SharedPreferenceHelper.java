@@ -2,10 +2,12 @@ package tool;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.support.v4.util.ArraySet;
 import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static android.content.Context.MODE_PRIVATE;
 
@@ -15,6 +17,41 @@ import static android.content.Context.MODE_PRIVATE;
 
 public class SharedPreferenceHelper
 {
+
+    public static void SaveDeleteBillNameToSP(Context context,String billName,String USERNAME)
+    {
+        SharedPreferences sp = context.getSharedPreferences("deleteBillName"+USERNAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        Set<String> stringSet = sp.getStringSet("billNameString", new ArraySet<String>());
+        Log.d("haha", "set 原来有" + stringSet.size());
+        stringSet.add(billName);
+        editor.remove("billNameString");
+        editor.apply();
+        editor.putStringSet("billNameString", stringSet);
+        editor.apply();
+    }
+
+    public static Set<String> getDeleteBillNameFromSP(Context context,String USERNAME)
+    {
+        SharedPreferences sp = context.getSharedPreferences("deleteBillName"+USERNAME, MODE_PRIVATE);
+        Set<String> stringSet = sp.getStringSet("billNameString", new ArraySet<String>());
+        return stringSet;
+    }
+
+    public static boolean delSingleDeletedBillNameFromSP(Context context, String USERNAME, String billName)
+    {
+        SharedPreferences sp = context.getSharedPreferences("deleteBillName" + USERNAME, MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        Set<String> stringSet = sp.getStringSet("billNameString", new ArraySet<String>());
+        boolean flag= stringSet.remove(billName);
+        Log.d("service", "删除后还剩" + stringSet.toString());
+        editor.remove("billNameString");
+        editor.apply();
+        editor.putStringSet("billNameString", stringSet);
+        editor.apply();
+        return flag;
+    }
+
 
     /**账单存出游人调用*/
     public static void SaveNameToSharedPreference(Context context,String nameString,String SPName,String billName)

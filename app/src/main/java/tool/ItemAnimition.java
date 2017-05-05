@@ -51,7 +51,18 @@ public  class ItemAnimition
         animator4.setDuration(300);
         animator4.start();
     }
+    public static void cardConfirmAndBigger(View view)
+    {
+        ObjectAnimator animator = ObjectAnimator.ofFloat(view, "scaleX", 1F, 1.5F);
+        ObjectAnimator animator2 = ObjectAnimator.ofFloat(view, "scaleY", 1F, 1.5F);
 
+        AnimatorSet animatorSet = new AnimatorSet();
+        animator.setDuration(300);
+        animator2.setDuration(300);
+
+        animatorSet.play(animator).with(animator2);
+        animatorSet.start();
+    }
     public static void handMove(View view)
     {
 

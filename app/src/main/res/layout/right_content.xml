@@ -17,11 +17,11 @@
 
             <Button
                 android:id="@+id/toogleButton"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
                 android:background="@mipmap/menubutton"
                 android:onClick="toggleMenu"
-                android:layout_marginBottom="30dp"
+                android:layout_marginBottom="22dp"
                 android:layout_gravity="left|bottom"
 
                 />
@@ -39,12 +39,12 @@
 
             <Button
                 android:id="@+id/post_to_friend"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginBottom="30dp"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_marginBottom="22dp"
                 android:layout_marginEnd="10dp"
                 android:layout_gravity="end|bottom"
-                android:background="@mipmap/ok"
+                android:background="@drawable/airplane"
                 />
         </android.support.v7.widget.Toolbar>
 

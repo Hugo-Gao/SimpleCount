@@ -71,6 +71,12 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
             showWarnSweetDialog("账号密码不能为空");
             return;
         }
+
+        if(Character.isDigit(userName.charAt(0)))
+        {
+            showWarnSweetDialog("账号不能以数字开头");
+            return;
+        }
         switch (v.getId())
         {
             case R.id.log_Button:
@@ -125,7 +131,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
                     {
                         if (res.equals("0"))
                         {
-                            showWarnSweetDialog("请先注册");
+                            showWarnSweetDialog("无此账号,请先注册");
                         }
                         else if(res.equals("1"))
                         {
@@ -245,6 +251,7 @@ public class SignAndLogActivity extends Activity implements View.OnClickListener
             public void onAnimationEnd(Animator animation)
             {
                 Intent intent = new Intent(SignAndLogActivity.this, AverageBillActivity.class);
+                intent.putExtra("connectServer", true);
                 startActivity(intent);
                 new Thread(new Runnable()//在后台线程中关闭此活动
                 {

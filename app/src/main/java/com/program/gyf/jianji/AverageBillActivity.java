@@ -70,6 +70,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import service.DeleteBillService;
 import tool.CardViewAdapter;
 import tool.ItemAnimition;
 import tool.SharedPreferenceHelper;
@@ -288,7 +289,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         messageFromNameSet = new ArraySet<>();
         billNameFromSet = new ArraySet<>();
         touristSet = new ArraySet<>();
-        if (intent.hasExtra("billName"))//判断从哪个Activity跳转过来
+        if (intent.hasExtra("billName")&&!intent.getStringExtra("billName").equals("SimpleCount"))//判断从哪个Activity跳转过来
         {
             saveRealBillNameToSharedPreferences(this, intent.getStringExtra("billName"));
             showRecyclerView();
@@ -317,10 +318,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             titleText.setText(getRealBillNameFromSharedPreferences(AverageBillActivity.this));
         }
 
-        if (checkFirstLog())
+        if (checkFirstLog(intent)&&checkFirstLog())//只有第一次登陆时才拉取数据
         {
             getBeanFromServer();
-
         } else
         {
             //deleteAllWebinfo(getRealBillNameFromSharedPreferences(this));
@@ -334,7 +334,14 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             Log.d("haha", "数据库读取错误");
         }
         //deleteServerBillName();
+        if (SharedPreferenceHelper.getDeleteBillNameFromSP(this, USERNAME).size() > 0)
+        {
+            Intent intent1 = new Intent(this, DeleteBillService.class);
+            startService(intent1);
+        }
     }
+
+
 
 
     private void getNewMessage(final SweetAlertDialog dialog)
@@ -348,10 +355,10 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 {
                     while (true)
                     {
-                        if (checkFirstLog())
+                        /*if (checkFirstLog())//用户第一次在本机登录就不用
                         {
                             continue;
-                        }
+                        }*/
 
                         if (USERNAME == null)
                         {
@@ -513,7 +520,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         firstMove = false;
         handText.setVisibility(View.VISIBLE);
         handPic.setVisibility(View.VISIBLE);
-        Log.d("test", "开始动画");
         ItemAnimition.handMove(handPic);
         startHandAnimateFlag = true;
         cachedThreadPool.execute(new Runnable()
@@ -561,6 +567,18 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             cursor.close();
             db.close();
+            return false;
+        }
+
+    }
+
+    private boolean checkFirstLog(Intent intent)
+    {
+        if (intent.hasExtra("connectServer") && intent.getBooleanExtra("connectServer", false))
+        {
+            return true;
+        }else
+        {
             return false;
         }
 
@@ -1066,7 +1084,42 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         });*/
     }
 
+    private void showRecyclerView(String billName) throws RuntimeException
+    {
+        if (billName == null || billName.equals(""))
+        {
+            return ;
+        }
+        Log.d("haha", "showRecyclerView()当前billList" +billName);
+        titleText.setText(billName);
+        beanList = getBeanFromDataBase(billName);
+        Log.d("haha", "数据库里有" + beanList.size() + "条数据");
+        adapter = new CardViewAdapter(beanList, this);
+        adapter.setOnItemClickListener(new CardViewAdapter.onRecyclerViewItemClickListen()
+        {
+            @Override
+            public void onItemClick(View view, BillBean bean, ImageView imageView)
+            {
+                if (!drawerLayout.isDrawerOpen(GravityCompat.START))
+                {
+                    intentToDetailActivity(bean, imageView);
+                }
+            }
+        });
+        recyclerView.setAdapter(adapter);
+        final DefaultItemAnimator animator = new DefaultItemAnimator();
+        recyclerView.setItemAnimator(animator);
+        recyclerView.getItemAnimator().setAddDuration(500);
+        if (beanList.size() > 0)
+        {
+            startHandAnimate(false);
+            closeHandAnimate();
+        } else
+        {
+            startHandAnimate(true);
+        }
 
+    }
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
     {
         Log.d("haha", OverLollipop() + "");
@@ -1320,7 +1373,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                                             }
                                                         });
                                                         dialog.show();
-                                                        showRecyclerView();
+                                                        showRecyclerView(billName);
                                                         if (billNameFromSet.size() != 0)
                                                         {
                                                             deleteServerBillName();
@@ -1877,6 +1930,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
     private void intentToBillListActivity()
     {
         Intent intent = new Intent(AverageBillActivity.this, BillListActivity.class);
+        intent.putExtra("fromName", getRealBillNameFromSharedPreferences(this));
         startActivity(intent);
     }
 
@@ -2179,6 +2233,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         materialDialog.show();
         numOfManButton = (FloatingActionButton) materialDialog.findViewById(R.id.numofManButton);
         editText = (EditText) materialDialog.findViewById(R.id.editText);
+        editText.setHint("以逗号分隔人名");
         numOfManButton.setOnClickListener(new View.OnClickListener()
         {
             @Override
@@ -2200,8 +2255,8 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     editText.setText("");
                     editText.setHint("");
                     materialDialog.show();
-                    numOfManButton = (FloatingActionButton) materialDialog.findViewById(R.id.numofManButton);
                     editText = (EditText) materialDialog.findViewById(R.id.editText);
+                    numOfManButton = (FloatingActionButton) materialDialog.findViewById(R.id.numofManButton);
                     numOfManButton.setOnClickListener(new View.OnClickListener()
                     {
                         @Override
@@ -2225,7 +2280,13 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                     {
                                         ItemAnimition.confirmAndBigger(numOfManButton);
                                         Toast.makeText(AverageBillActivity.this, "请先往输入框输入信息", Toast.LENGTH_SHORT).show();
-                                    } else
+                                    }
+                                    else if( editText.getText().toString().contains(",")|| editText.getText().toString().contains("，"))
+                                    {
+                                        ItemAnimition.confirmAndBigger(numOfManButton);
+                                        Toast.makeText(AverageBillActivity.this, "不能含有逗号", Toast.LENGTH_SHORT).show();
+                                    }
+                                    else
                                     {
                                         String billName = editText.getText().toString();
                                         saveRealBillNameToSharedPreferences(AverageBillActivity.this, billName);

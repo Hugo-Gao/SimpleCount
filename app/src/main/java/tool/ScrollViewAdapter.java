@@ -2,6 +2,7 @@ package tool;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +34,7 @@ public class ScrollViewAdapter extends RecyclerView.Adapter implements View.OnCl
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType)
     {
-        View view = mInflater.inflate(R.layout.billlist_item, parent,false);
+        View view = mInflater.inflate(R.layout.billlist_item, parent, false);
         //返回到Holder
         view.setOnClickListener(this);
         return new MyHolder(view);
@@ -47,6 +48,27 @@ public class ScrollViewAdapter extends RecyclerView.Adapter implements View.OnCl
         myHolder.itemView.setTag(R.id.back_btn, position);
     }
 
+
+    public boolean deleteBill(String billName)
+    {
+        int position = -1;
+        for (BillItem item:billItemList)
+        {
+            position++;
+            if (item.getBillName().equals(billName))
+            {
+                break;
+            }
+        }
+        Log.d("haha", "position is " + position);
+        if (position > billItemList.size() - 1 || position < 0)
+        {
+            return false;
+        }
+        billItemList.remove(position);
+        notifyItemRemoved(position);
+        return true;
+    }
 
     @Override
     public int getItemCount()
@@ -65,7 +87,7 @@ public class ScrollViewAdapter extends RecyclerView.Adapter implements View.OnCl
 
     public interface OnCardItemClickListenner
     {
-        void onItemClick(View v,int position);
+        void onItemClick(View v, int position);
     }
 
     public void setOnCardItemClickListenner(OnCardItemClickListenner listenner)
@@ -73,9 +95,10 @@ public class ScrollViewAdapter extends RecyclerView.Adapter implements View.OnCl
         onCardItemClickListenner = listenner;
     }
 
-     public class MyHolder extends RecyclerView.ViewHolder
+    public class MyHolder extends RecyclerView.ViewHolder
     {
         private ImageView imageView;
+
         public MyHolder(View itemView)
         {
             super(itemView);
