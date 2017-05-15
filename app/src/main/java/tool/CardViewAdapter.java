@@ -97,6 +97,8 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
         }
     }
 
+
+
     /**
      * 给控件绑定布局
      */
@@ -126,6 +128,7 @@ public class CardViewAdapter extends RecyclerView.Adapter<CardViewAdapter.MyHold
     {
         mOnItemClickListen = listener;
     }
+
 
 }
 

@@ -11,7 +11,9 @@
         <item name="android:windowEnterTransition">@transition/explode</item>
         <item name="android:windowExitTransition">@transition/explode</item>
         <!-- 指定共享元素进入/退出的动画效果 -->
+    </style>
 
+    <style name="AppTheme2" parent="AppTheme">
     </style>
 
     <style name="MainContentStyle" >

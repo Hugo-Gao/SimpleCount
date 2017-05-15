@@ -244,6 +244,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     protected void onCreate(Bundle savedInstanceState)
     {
+        setTheme(R.style.AppTheme2);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         PHOTO_PATH = this.getDir("ASimpleCount", MODE_PRIVATE);
@@ -278,7 +279,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         Typeface titleFont = Typeface.createFromAsset(this.getAssets(), "GenBasR.ttf");
         titleText = (TextView) findViewById(R.id.title);
         titleText.setTypeface(titleFont);
-        titleText.setText("");
+        titleText.setText("SimpleCount");
         tv_user_name = (TextView) findViewById(R.id.user_name);
         tv_user_name.setText("欢迎," + getTableNameBySP(this));
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -1064,24 +1065,25 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             startHandAnimate(true);
         }
-        /*recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
         {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy)
             {
                 super.onScrolled(recyclerView, dx, dy);
-                if (dy > 20)
+                if(adapter.getItemCount()>0)
                 {
-                    ItemAnimition.translationToDisapper(addBillButton);
-                    ItemAnimition.toolBarDisappear(toolbar);
+                    if (dy > 20)
+                    {
+                        ItemAnimition.translationToDisapper(addBillButton);
 
-                } else if (dy < -10)
-                {
-                    ItemAnimition.translationToAppear(addBillButton);
-                    ItemAnimition.toolBarAppear(toolbar);
+                    } else if (dy < -10)
+                    {
+                        ItemAnimition.translationToAppear(addBillButton);
+                    }
                 }
             }
-        });*/
+        });
     }
 
     private void showRecyclerView(String billName) throws RuntimeException
@@ -1118,6 +1120,22 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
         {
             startHandAnimate(true);
         }
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener()
+        {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy)
+            {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy > 20)
+                {
+                    ItemAnimition.translationToDisapper(addBillButton);
+
+                } else if (dy < -10)
+                {
+                    ItemAnimition.translationToAppear(addBillButton);
+                }
+            }
+        });
 
     }
     private void intentToDetailActivity(BillBean bean, ImageView imageView)
@@ -1557,7 +1575,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                 }
                 break;
             case R.id.floatbutton://此按钮即是添加账单按钮
-                if (!getRealBillNameFromSharedPreferences(this).equals(""))
+                if (!getRealBillNameFromSharedPreferences(this).equals("") && !getRealBillNameFromSharedPreferences(this).equals("SimpleCount"))
                 {
                     addBill();
                 } else
@@ -2187,6 +2205,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
             }
         });
         thread.start();
+        closeHandAnimate();
     }
 
     /**
@@ -2299,14 +2318,7 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                                         SQLiteDatabase db = dbHelper.getWritableDatabase();
                                         dbHelper.createTable(db);
                                         db.close();
-                                        Snackbar.make(addBillButton, "保存成功" + billName, Snackbar.LENGTH_LONG).setAction("撤销", new View.OnClickListener()
-                                        {
-                                            @Override
-                                            public void onClick(View v)
-                                            {
-                                                SharedPreferenceHelper.deleteAllName(AverageBillActivity.this, SharedPreferenceName);
-                                            }
-                                        }).show();
+                                        Snackbar.make(addBillButton, "保存成功" + billName, Snackbar.LENGTH_LONG).show();
                                         startHandAnimate(false);
                                         closeHandAnimate();
                                     }
@@ -2331,11 +2343,11 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
 
     private boolean checkHaveSettle()
     {
-        if (titleText.getText() != "")
+        if (titleText.getText().equals("")||titleText.getText().equals("SimpleCount"))
         {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
     private synchronized void saveWebInfoToDataBase(String BillName, BillBean bean)

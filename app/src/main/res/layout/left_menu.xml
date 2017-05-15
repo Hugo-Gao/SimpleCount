@@ -27,14 +27,14 @@
                 />
 
             <TextView
+                android:id="@+id/user_name"
                 android:layout_width="wrap_content"
-                android:layout_marginTop="25dp"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:id="@+id/user_name"
+                android:layout_marginTop="25dp"
+                android:text="用户名"
                 android:textColor="@color/textColor"
                 android:textSize="25sp"
-                android:text="用户名"
                 />
 
         </LinearLayout>
@@ -57,11 +57,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
-                android:textColor="@color/textColor"
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
                 android:text="添加旅行账本"
+                android:textColor="@color/textColor"
                 android:textSize="20sp"/>
         </LinearLayout>
 
@@ -86,8 +86,8 @@
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
-                android:textColor="@color/textColor"
                 android:text="结算"
+                android:textColor="@color/textColor"
                 android:textSize="20sp"/>
         </LinearLayout>
 
@@ -112,8 +112,8 @@
                 android:fontFamily="sans-serif-light"
                 android:paddingLeft="6dp"
                 android:paddingTop="10dp"
-                android:textColor="@color/textColor"
                 android:text="我的账本集"
+                android:textColor="@color/textColor"
                 android:textSize="20sp"/>
         </LinearLayout>
     </LinearLayout>

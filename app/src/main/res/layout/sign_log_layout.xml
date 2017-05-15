@@ -78,7 +78,9 @@
                     android:layout_height="40dp"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="130dp"
-                    android:background="#CCD7C5"
+                    android:textColor="@color/textColor"
+                    android:textSize="17sp"
+                    android:background="@drawable/logbtn"
                     android:text="登录"/>
 
                 <Button
@@ -87,7 +89,9 @@
                     android:layout_height="40dp"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="10dp"
-                    android:background="#C7A27C"
+                    android:textColor="@color/textColor"
+                    android:textSize="17sp"
+                    android:background="@drawable/signbtn"
                     android:text="注册"/>
             </LinearLayout>
         </android.support.v7.widget.CardView>

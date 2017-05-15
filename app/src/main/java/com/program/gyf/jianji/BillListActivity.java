@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
@@ -73,7 +74,6 @@ public class BillListActivity extends Activity
         fab = (FloatingActionButton) findViewById(R.id.delete_btn);
         Intent intent = getIntent();
         fromBillName = intent.getStringExtra("fromName");
-        Toast.makeText(this, "from " + fromBillName, Toast.LENGTH_SHORT).show();
         moneyTxt = (FadingTextView) findViewById(R.id.money_txt);
         billNameTxt = (FadingTextView) findViewById(R.id.bill_name_txt);
         tableListDBHelper = new TableListDBHelper(this, "TableNameList.db", null, 1, USERNAME);
@@ -86,7 +86,7 @@ public class BillListActivity extends Activity
             @Override
             public void onItemClick(final View v, final int position)
             {
-                ItemAnimition.cardConfirmAndBigger(v);
+                ((CardView) v).setCardElevation(30.0f);
                 new Thread(new Runnable()
                 {
                     @Override
