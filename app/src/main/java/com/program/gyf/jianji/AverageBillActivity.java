@@ -1249,6 +1249,9 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                         saveBillNameToDB(billName);
                         SaveNameToSharedPreference(AverageBillActivity.this, tourists, SharedPreferenceName, billName);
                     }
+                    /**
+                     * 获取详细数据
+                     */
                     getEachBillBeanFromServer(billsName, pDialog, false);
                 } catch (Exception e)
                 {
@@ -2110,7 +2113,6 @@ public class AverageBillActivity extends Activity implements View.OnClickListene
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
                     intent.putExtra("name", bean.getName());
                     startActivityForResult(intent, TAKE_PHOTO);
-                    materialDialog.dismiss();
                 } else
                 {
                     Toast.makeText(this, "需要相机权限才能拍照哦", Toast.LENGTH_SHORT).show();
